@@ -42,6 +42,8 @@ public final class Server {
     private static final Object object = new Object();
 
     private static final int timeoutDelay = 1000 * 20;
+    // 客户端每2秒发一次心跳、10秒收不到数据就自己断开，服务端等更久没有意义
+    private static final int keepAliveTimeout = 1000 * 10;
 
     public static void main(String... args) {
         // 任何线程崩溃都走正常释放(先恢复分辨率)，默认处理会直接杀进程
@@ -65,6 +67,7 @@ public final class Server {
             Device.init();
             // 连接
             connectClient();
+            isConnected = true;
             // 初始化子服务
             boolean canAudio = AudioEncode.init();
             VideoEncode.init();
@@ -166,12 +169,12 @@ public final class Server {
         }
     }
 
-    // 心跳检测单独一个线程：画面静止或网络卡死时视频线程会阻塞，放在视频循环里检测不到断线
+    // 心跳检测单独一个线程：平板息屏没有新帧、或网络卡死写阻塞时，视频线程会卡住，放在视频循环里检测不到断线
     private static void executeKeepAliveCheck() {
         try {
             while (!Thread.interrupted()) {
                 Thread.sleep(1000);
-                if (System.currentTimeMillis() - lastKeepAliveTime > timeoutDelay)
+                if (System.currentTimeMillis() - lastKeepAliveTime > keepAliveTimeout)
                     throw new IOException("连接断开");
             }
         } catch (Exception e) {
@@ -193,8 +196,10 @@ public final class Server {
         try {
             while (!Thread.interrupted()) {
                 Thread.sleep(100);
-                if (!initial.equals(get.invoke(null, "sys.shutdown.requested") + "|" + get.invoke(null, "sys.powerctl")))
+                if (!initial.equals(get.invoke(null, "sys.shutdown.requested") + "|" + get.invoke(null, "sys.powerctl"))) {
+                    isShutdown = true;
                     throw new IOException("系统关机");
+                }
             }
         } catch (Exception e) {
             errorClose(e);
@@ -308,6 +313,8 @@ public final class Server {
     }
 
     private static final AtomicBoolean isReleased = new AtomicBoolean(false);
+    private static volatile boolean isConnected = false;
+    private static volatile boolean isShutdown = false;
 
     // 释放资源：先恢复分辨率，后面哪步卡住也不影响；5秒还没退出就强制退出
     // 不能用 synchronized：writeMain 也锁 Server.class，断网时写阻塞会让这里永远等锁
@@ -322,22 +329,26 @@ public final class Server {
         });
         haltThread.setDaemon(true);
         haltThread.start();
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             try {
                 switch (i) {
                     case 0:
                         Device.fallbackResolution();
                         break;
                     case 1:
+                        // 关机时不用做
+                        if (isConnected && !isShutdown) Device.runCloseActions();
+                        break;
+                    case 2:
                         mainInputStream.close();
                         mainSocket.close();
                         videoSocket.close();
                         break;
-                    case 2:
+                    case 3:
                         VideoEncode.release();
                         AudioEncode.release();
                         break;
-                    case 3:
+                    case 4:
                         Runtime.getRuntime().exit(0);
                         break;
                 }

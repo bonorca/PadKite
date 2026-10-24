@@ -317,7 +317,22 @@ public final class Device {
         }
     }
 
+    private static boolean isScreenPowerOff = false;
+
+    // 断开时操作放在服务端：断网、客户端被杀也照样执行
+    public static void runCloseActions() {
+        // KEYCODE_SLEEP / KEYCODE_WAKEUP 不像电源键那样会把状态反过来
+        if (Options.lockOnClose) keyEvent(223, 0);
+        else if (Options.lightOnClose) {
+            keyEvent(224, 0);
+            // 熄屏控制下系统以为屏幕亮着，唤醒键不管用，要把面板电源模式改回正常
+            if (isScreenPowerOff) changeScreenPowerMode(2);
+        }
+        if (Options.muteOnClose) changeVolume(0);
+    }
+
     public static void changeScreenPowerMode(int mode) {
+        isScreenPowerOff = mode != 2;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             long[] physicalDisplayIds = SurfaceControl.getPhysicalDisplayIds();
             if (physicalDisplayIds == null) return;

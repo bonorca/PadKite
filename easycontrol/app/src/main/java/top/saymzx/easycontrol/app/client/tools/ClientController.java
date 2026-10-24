@@ -110,8 +110,8 @@ public class ClientController implements TextureView.SurfaceTextureListener {
                     clientStream.writeToMain(ControlPacket.createPowerEvent(0));
                     break;
                 case "buttonLight":
+                    // 只发正常模式：原来再补一个 STATE_OFF(=1) 会让面板停在 Doze(暗屏)
                     clientStream.writeToMain(ControlPacket.createLightEvent(Display.STATE_ON));
-                    clientStream.writeToMain(ControlPacket.createLightEvent(Display.STATE_OFF));
                     break;
                 case "buttonLightOff":
                     clientStream.writeToMain(ControlPacket.createLightEvent(Display.STATE_UNKNOWN));

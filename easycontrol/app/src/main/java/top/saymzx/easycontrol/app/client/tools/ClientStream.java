@@ -108,6 +108,9 @@ public class ClientStream {
                 + " keepAwake=" + (device.keepWakeOnRunning ? 1 : 0)
                 + " supportH265=" + ((device.useH265 && supportH265) ? 1 : 0)
                 + " supportOpus=" + (supportOpus ? 1 : 0)
+                + " lockOnClose=" + (!device.isTempDevice() && device.lockOnClose ? 1 : 0)
+                + " lightOnClose=" + (!device.isTempDevice() && device.lightOnClose ? 1 : 0)
+                + " muteOnClose=" + (!device.isTempDevice() && device.muteOnClose ? 1 : 0)
                 + " startApp=" + device.startApp + " \n").getBytes()));
     }
 

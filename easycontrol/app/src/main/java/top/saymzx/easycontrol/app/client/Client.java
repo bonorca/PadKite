@@ -123,15 +123,7 @@ public class Client {
         // 更新数据库
         if (!isTempDevice) AppData.dbHelper.update(device);
         allClient.remove(device.uuid);
-        // 运行断开时操作：必须在关流前同步写出（post 到 controller 线程会在关流后执行而失效）
-        if (!isTempDevice && clientStream != null) {
-            try {
-                if (device.lockOnClose) clientStream.writeToMain(ControlPacket.createPowerEvent(0));
-                else if (device.lightOnClose) clientStream.writeToMain(ControlPacket.createPowerEvent(1));
-                if (device.muteOnClose) clientStream.writeToMain(ControlPacket.createVolumeEvent(0));
-            } catch (Exception ignored) {
-            }
-        }
+        // 断开时操作(锁定/恢复背光/静音)由服务端在会话结束时执行，启动参数传过去
         // 关闭组件
         if (clientPlayer != null) clientPlayer.close();
         if (clientController != null) clientController.close();

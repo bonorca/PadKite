@@ -15,6 +15,9 @@ public final class Options {
     public static boolean supportH265 = true;
     public static boolean supportOpus = true;
     public static String startApp = "";
+    public static boolean lockOnClose = false;
+    public static boolean lightOnClose = false;
+    public static boolean muteOnClose = false;
 
     public static void parse(String... args) {
         for (String arg : args) {
@@ -55,6 +58,15 @@ public final class Options {
                     break;
                 case "startApp":
                     startApp = value;
+                    break;
+                case "lockOnClose":
+                    lockOnClose = Integer.parseInt(value) == 1;
+                    break;
+                case "lightOnClose":
+                    lightOnClose = Integer.parseInt(value) == 1;
+                    break;
+                case "muteOnClose":
+                    muteOnClose = Integer.parseInt(value) == 1;
                     break;
             }
         }
