@@ -93,7 +93,20 @@ public final class Device {
         return Integer.parseInt(Objects.requireNonNull(m.group(1)));
     }
 
+    // 当前生效的 density(用户调过"显示大小"就是 Override)，和恢复时要写回的值
+    private static int baseDensity = 0;
+    private static String originalDensity = "reset";
+
     private static void getRealSize() throws IOException, InterruptedException {
+        // 上次会话没能恢复的 density(如平板断电)先按备份恢复
+        ResolutionGuard.restoreDensity();
+        String densityOutput = Device.execReadOutput("wm density");
+        Matcher physicalDensity = Pattern.compile("Physical density: (\\d+)").matcher(densityOutput);
+        Matcher overrideDensity = Pattern.compile("Override density: (\\d+)").matcher(densityOutput);
+        if (overrideDensity.find()) {
+            originalDensity = overrideDensity.group(1);
+            baseDensity = Integer.parseInt(originalDensity);
+        } else if (physicalDensity.find()) baseDensity = Integer.parseInt(physicalDensity.group(1));
         String output = Device.execReadOutput("wm size");
         // 有 Override 说明上次没能恢复(如平板断电)，先恢复；一律以物理分辨率为准
         if (output.contains("Override")) {
@@ -172,7 +185,12 @@ public final class Device {
 
             // 修改分辨率
             if (virtualDisplay != null) virtualDisplay.resize(width, height, displayInfo.density);
-            else Device.execReadOutput("wm size " + width + "x" + height);
+            else if (baseDensity > 0) {
+                // density 按短边同比例缩放，最小宽度(dp)和原生一样，桌面等布局不会放不下
+                int density = baseDensity * Math.min(width, height) / Math.min(realSize.first, realSize.second);
+                ResolutionGuard.backupDensity(originalDensity);
+                Device.execReadOutput("wm size " + width + "x" + height + " && wm density " + density);
+            } else Device.execReadOutput("wm size " + width + "x" + height);
 
             // 更新，需延迟一段时间
             Thread.sleep(200);
@@ -198,7 +216,10 @@ public final class Device {
                 if (appStackId != -1)
                     Device.execReadOutput("am display move-stack " + appStackId + " " + Display.DEFAULT_DISPLAY);
                 virtualDisplay.release();
-            } else Device.execReadOutput("wm size reset");
+            } else {
+                Device.execReadOutput("wm size reset");
+                ResolutionGuard.restoreDensity();
+            }
         }
     }
 

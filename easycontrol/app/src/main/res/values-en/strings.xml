@@ -109,6 +109,8 @@
     <string name="set_device_button_start_wireless">Enable wireless</string>
     <string name="set_device_buttons_send">Send</string>
     <string name="set_device_button_recover">Recover</string>
+    <string name="notification_channel_connect">Connection</string>
+    <string name="notification_connected">Controlling %s</string>
     <string name="set_device_button_delete">Delete</string>
 
     <!-- 加载中模块 -->

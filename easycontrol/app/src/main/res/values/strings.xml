@@ -109,6 +109,8 @@
     <string name="set_device_button_start_wireless">打开无线</string>
     <string name="set_device_buttons_send">发送</string>
     <string name="set_device_button_recover">恢复</string>
+    <string name="notification_channel_connect">连接状态</string>
+    <string name="notification_connected">正在控制 %s</string>
     <string name="set_device_button_delete">删除</string>
 
     <!-- 加载中模块 -->

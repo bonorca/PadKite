@@ -10,6 +10,8 @@ Control an Android device from another Android device. Fork of [yutils/Easycontr
 - **Resolution is always restored.** This covers a normal disconnect, the adb shell closing, a dead network (10 s heartbeat timeout), the server being killed or crashing (a separate guard process resets it), and the tablet rebooting. A size left over from a power loss is reset on the next connect.
 - **Disconnect actions always run.** Lock, restore backlight and mute are done by the server when the session ends, so they also happen when the connection drops. Restore backlight now also works after the screen-off button.
 - **Backlight toggle fixed.** Turning the backlight back on left the panel in doze (dim).
+- **Density follows resolution.** When the resolution is changed, density is scaled by the same ratio, so the smallest width in dp stays as before and the launcher still fits. Your own display size setting is backed up on the tablet and restored afterwards.
+- **Foreground service while connected,** so Android does not freeze the app in the background and drop the session.
 - **Bitrate up to 50 Mbps.** It is picked automatically whenever resolution or FPS changes, and can still be set by hand.
 - **Update checker removed.** The `com.kotlinx:appUpdate` library and its plain-HTTP check are gone.
 - **No public signing key.** Upstream ships its keystore and password, so you build with your own key.

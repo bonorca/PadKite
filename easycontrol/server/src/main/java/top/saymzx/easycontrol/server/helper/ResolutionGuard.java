@@ -7,12 +7,20 @@ import android.util.Log;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import top.saymzx.easycontrol.server.entity.Device;
 
 // 分辨率兜底：服务端不管怎么结束(被杀、崩溃、kill -9)，都由独立的守护进程把分辨率恢复
 public final class ResolutionGuard {
     private static final String NAME = "easycontrol_guard";
-    // stdin 接在服务端上，服务端一退出就读到 EOF，随即 wm size reset；系统服务重启时会失败，重试一分钟
-    private static final String SCRIPT = "exec >/dev/null 2>&1; read x; i=0; until wm size reset; do i=$((i+1)); [ $i -ge 60 ] && break; sleep 1; done";
+    // 修改前的 density 存在平板上：用户在设置里调过"显示大小"就是个 Override，不能简单 reset；
+    // 断电、被杀后由守护进程或下次连接按它恢复。不能叫 easycontrol_*，客户端换版本时会 rm easycontrol_*
+    private static final String DENSITY_BACKUP = "/data/local/tmp/easycontrol-density";
+    // stdin 接在服务端上，服务端一退出就读到 EOF，随即恢复分辨率和 density；系统服务重启时会失败，重试一分钟
+    private static final String SCRIPT = "exec >/dev/null 2>&1; read x; f=" + DENSITY_BACKUP + "; i=0;"
+            + " until wm size reset && { [ ! -f $f ] || { wm density $(cat $f) && rm $f; }; }; do i=$((i+1)); [ $i -ge 60 ] && break; sleep 1; done";
     // 必须一直持有，否则管道被回收关闭，守护进程会提前恢复
     private static Process process;
 
@@ -36,6 +44,33 @@ public final class ResolutionGuard {
                 Log.e("Easycontrol_Server", "ResolutionGuard: start failed " + e2);
             }
         }
+    }
+
+    // 只记第一次改之前的值，同一会话再改分辨率不覆盖；先写临时文件再改名，断电也不会留下半个文件
+    public static void backupDensity(String original) {
+        File backup = new File(DENSITY_BACKUP);
+        if (backup.exists()) return;
+        File tmp = new File(DENSITY_BACKUP + ".tmp");
+        try (FileOutputStream out = new FileOutputStream(tmp)) {
+            out.write(original.getBytes());
+            out.getFD().sync();
+        } catch (Exception e) {
+            return;
+        }
+        tmp.renameTo(backup);
+    }
+
+    public static void restoreDensity() throws IOException, InterruptedException {
+        File backup = new File(DENSITY_BACKUP);
+        if (!backup.exists()) return;
+        String density;
+        try (FileInputStream in = new FileInputStream(backup)) {
+            byte[] buffer = new byte[32];
+            int len = in.read(buffer);
+            density = len > 0 ? new String(buffer, 0, len).trim() : "";
+        }
+        if (density.equals("reset") || density.matches("\\d+")) Device.execReadOutput("wm density " + density);
+        backup.delete();
     }
 
     private static boolean findPrevious(boolean kill) {

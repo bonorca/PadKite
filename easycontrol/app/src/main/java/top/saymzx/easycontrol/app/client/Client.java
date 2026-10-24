@@ -46,6 +46,7 @@ public class Client {
                     clientStream.close();
                     return;
                 }
+                AppData.uiHandler.post(ClientService::update);
                 // 控制器、播放器
                 clientController = new ClientController(device, clientStream, () -> clientPlayer = new ClientPlayer(device.uuid, clientStream));
                 // 临时设备
@@ -98,6 +99,19 @@ public class Client {
         return client.clientPlayer;
     }
 
+    static boolean isEmpty() {
+        return allClient.isEmpty();
+    }
+
+    static String names() {
+        StringBuilder names = new StringBuilder();
+        for (Client client : allClient.values()) {
+            if (names.length() > 0) names.append("、");
+            names.append(client.device.name);
+        }
+        return names.toString();
+    }
+
     public static void sendAction(String uuid, String action, ByteBuffer byteBuffer, int delay) {
         if (action == null || uuid == null) return;
         if (action.equals("start")) {
@@ -123,6 +137,7 @@ public class Client {
         // 更新数据库
         if (!isTempDevice) AppData.dbHelper.update(device);
         allClient.remove(device.uuid);
+        AppData.uiHandler.post(ClientService::update);
         // 断开时操作(锁定/恢复背光/静音)由服务端在会话结束时执行，启动参数传过去
         // 关闭组件
         if (clientPlayer != null) clientPlayer.close();

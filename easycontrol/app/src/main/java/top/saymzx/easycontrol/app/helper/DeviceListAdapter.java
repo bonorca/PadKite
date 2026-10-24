@@ -148,7 +148,9 @@ public class DeviceListAdapter extends BaseAdapter {
     private void reset(Device device) {
         Pair<ItemLoadingBinding, Dialog> loading = ViewTools.createLoading(context);
         loading.second.show();
-        AdbTools.runOnceCmd(device, "wm size reset", result -> AppData.uiHandler.post(() -> {
+        // density 按服务端留下的备份恢复(可能是用户自己调的"显示大小")
+        String cmd = "wm size reset; f=/data/local/tmp/easycontrol-density; if [ -f $f ]; then wm density $(cat $f) && rm $f; fi";
+        AdbTools.runOnceCmd(device, cmd, result -> AppData.uiHandler.post(() -> {
             ViewTools.dismiss(loading.second);
             Toast.makeText(context, context.getString(result ? R.string.toast_success : R.string.toast_fail), Toast.LENGTH_SHORT).show();
         }));
