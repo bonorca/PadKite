@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">易控•雨季版</string>
-    <string name="app_name_simple">易控•雨季版</string>
-    <string name="app_name_dev">易控•雨季版Dev</string>
+    <string name="app_name">易控</string>
+    <string name="app_name_simple">易控</string>
+    <string name="app_name_dev">易控Beta</string>
 
     <!-- 页面标题 -->
     <string name="title_device_detail">设备配置</string>
@@ -11,7 +11,6 @@
     <string name="title_adb_key">自定义密钥</string>
 
     <!-- 主页 -->
-    <string name="main_poem">春色三分，二分尘土，一分流水</string>
     <string name="main_float_permission">请授予悬浮窗权限，否则软件无法使用</string>
     <string name="main_float_permission_button">前往设置</string>
     <string name="main_scan_device_local">本机</string>
@@ -93,7 +92,7 @@
     <string name="device_max_fps">最大帧率</string>
     <string name="device_max_fps_detail">最大帧率限制，值越低画面越卡顿</string>
     <string name="device_max_video_bit">最大码率</string>
-    <string name="device_max_video_bit_detail">码率越大视频损失越小体积越大，建议设置为4，过高会导致延迟增加</string>
+    <string name="device_max_video_bit_detail">随最大大小和帧率自动调整，也可手动选择</string>
     <string name="device_use_h265">使用H265</string>
     <string name="device_use_h265_detail">使用H265，视频体积小延迟低，若画面异常可尝试关闭</string>
     <string name="device_connect_on_start">软件启动时打开</string>

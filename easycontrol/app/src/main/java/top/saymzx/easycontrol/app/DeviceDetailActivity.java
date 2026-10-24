@@ -11,11 +11,13 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.util.Arrays;
 import java.util.UUID;
 
 import top.saymzx.easycontrol.app.databinding.ActivityDeviceDetailBinding;
 import top.saymzx.easycontrol.app.databinding.ItemLoadingBinding;
 import top.saymzx.easycontrol.app.databinding.ItemScanAddressListBinding;
+import top.saymzx.easycontrol.app.databinding.ItemSpinnerBinding;
 import top.saymzx.easycontrol.app.databinding.ItemTextBinding;
 import top.saymzx.easycontrol.app.entity.AppData;
 import top.saymzx.easycontrol.app.entity.Device;
@@ -27,6 +29,7 @@ public class DeviceDetailActivity extends AppCompatActivity {
     private ActivityDeviceDetailBinding activityDeviceDetailBinding;
     private boolean isNew;
     private Device device;
+    private ItemSpinnerBinding maxVideoBitSpinner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,7 +59,6 @@ public class DeviceDetailActivity extends AppCompatActivity {
     // 绘制UI
     private static final String[] maxSizeList = new String[]{"2560", "1920", "1600", "1280", "1024", "800"};
     private static final String[] maxFpsList = new String[]{"90", "60", "40", "30", "20", "10"};
-    private static final String[] maxVideoBitList = new String[]{"12", "8", "4", "2", "1"};
 
     private void drawUI() {
         // 预填写参数
@@ -93,13 +95,31 @@ public class DeviceDetailActivity extends AppCompatActivity {
         activityDeviceDetailBinding.layoutOption.setOnClickListener(v -> activityDeviceDetailBinding.layoutOptionSub.setVisibility(activityDeviceDetailBinding.layoutOptionSub.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
         ArrayAdapter<String> maxSizeAdapter = new ArrayAdapter<>(AppData.applicationContext, R.layout.item_spinner_item, maxSizeList);
         ArrayAdapter<String> maxFpsAdapter = new ArrayAdapter<>(AppData.applicationContext, R.layout.item_spinner_item, maxFpsList);
-        ArrayAdapter<String> maxVideoBitAdapter = new ArrayAdapter<>(AppData.applicationContext, R.layout.item_spinner_item, maxVideoBitList);
+        ArrayAdapter<String> maxVideoBitAdapter = new ArrayAdapter<>(AppData.applicationContext, R.layout.item_spinner_item, Device.maxVideoBitList);
         activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSwitchCard(this, getString(R.string.device_is_audio), getString(R.string.device_is_audio_detail), device.isAudio, isChecked -> device.isAudio = isChecked).getRoot());
-        activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSpinnerCard(this, getString(R.string.device_max_size), getString(R.string.device_max_size_detail), String.valueOf(device.maxSize), maxSizeAdapter, str -> device.maxSize = Integer.parseInt(str)).getRoot());
-        activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSpinnerCard(this, getString(R.string.device_max_fps), getString(R.string.device_max_fps_detail), String.valueOf(device.maxFps), maxFpsAdapter, str -> device.maxFps = Integer.parseInt(str)).getRoot());
-        activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSpinnerCard(this, getString(R.string.device_max_video_bit), getString(R.string.device_max_video_bit_detail), String.valueOf(device.maxVideoBit), maxVideoBitAdapter, str -> device.maxVideoBit = Integer.parseInt(str)).getRoot());
+        activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSpinnerCard(this, getString(R.string.device_max_size), getString(R.string.device_max_size_detail), String.valueOf(device.maxSize), maxSizeAdapter, str -> {
+            // 下拉框初始化时也会回调一次，值没变就不动码率，免得覆盖手动选的码率
+            int value = Integer.parseInt(str);
+            if (value == device.maxSize) return;
+            device.maxSize = value;
+            applyAutoVideoBit();
+        }).getRoot());
+        activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSpinnerCard(this, getString(R.string.device_max_fps), getString(R.string.device_max_fps_detail), String.valueOf(device.maxFps), maxFpsAdapter, str -> {
+            int value = Integer.parseInt(str);
+            if (value == device.maxFps) return;
+            device.maxFps = value;
+            applyAutoVideoBit();
+        }).getRoot());
+        maxVideoBitSpinner = ViewTools.createSpinnerCard(this, getString(R.string.device_max_video_bit), getString(R.string.device_max_video_bit_detail), String.valueOf(device.maxVideoBit), maxVideoBitAdapter, str -> device.maxVideoBit = Integer.parseInt(str));
+        activityDeviceDetailBinding.layoutOptionSub.addView(maxVideoBitSpinner.getRoot());
         activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSwitchCard(this, getString(R.string.device_use_h265), getString(R.string.device_use_h265_detail), device.useH265, isChecked -> device.useH265 = isChecked).getRoot());
         activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSwitchCard(this, getString(R.string.device_connect_on_start), getString(R.string.device_connect_on_start_detail), device.connectOnStart, isChecked -> device.connectOnStart = isChecked).getRoot());
+    }
+
+    // 最大大小或最大帧率变化后，按两者组合自动选码率，之后仍可手动修改
+    private void applyAutoVideoBit() {
+        device.maxVideoBit = Device.autoVideoBit(device.maxSize, device.maxFps);
+        maxVideoBitSpinner.itemSpinner.setSelection(Arrays.asList(Device.maxVideoBitList).indexOf(String.valueOf(device.maxVideoBit)));
     }
 
     // 设置监听

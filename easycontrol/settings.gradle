@@ -12,6 +12,6 @@ dependencyResolutionManagement {
     mavenCentral()
   }
 }
-rootProject.name = "易控•雨季版"
+rootProject.name = "Easycontrol"
 include ':app'
 include ':server'
