@@ -66,7 +66,7 @@
     <string name="device_keep_wake_on_running">Keep remote device unlocked</string>
     <string name="device_keep_wake_on_running_detail">Remote device won\'t lock when connected</string>
     <string name="device_change_resolution_on_running">Adaptive resolution</string>
-    <string name="device_change_resolution_on_running_detail">Override remote device\'s resolution. WARNING: resolution may not reset automatically when disconnected(you can manually reset it in details page)</string>
+    <string name="device_change_resolution_on_running_detail">Changes the remote device\'s resolution to fit the window. Restored on disconnect.</string>
     <string name="device_small_to_mini_on_running">Floating window auto minimize</string>
     <string name="device_small_to_mini_on_running_detail">Touch outside of floating window to minimize it</string>
     <string name="device_full_to_mini_on_running">Fullscreen auto minimize</string>

@@ -66,7 +66,7 @@
     <string name="device_keep_wake_on_running">被控端保持唤醒</string>
     <string name="device_keep_wake_on_running_detail">运行过程中被控端不锁定（修改锁定时间）</string>
     <string name="device_change_resolution_on_running">自适应分辨率</string>
-    <string name="device_change_resolution_on_running_detail">开启后会自动修改被控端分辨率以适应窗口大小，可能会无法自动恢复(可手动恢复)，慎重考虑</string>
+    <string name="device_change_resolution_on_running_detail">开启后会自动修改被控端分辨率以适应窗口大小，断开后恢复</string>
     <string name="device_small_to_mini_on_running">小窗自动挂起</string>
     <string name="device_small_to_mini_on_running_detail">触摸小窗以外位置时自动最小化</string>
     <string name="device_full_to_mini_on_running">全屏挂起为Mini栏</string>

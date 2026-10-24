@@ -9,8 +9,8 @@ android {
         applicationId "top.saymzx.easycontrol.app"
         minSdk 23
         targetSdk 34
-        versionCode 10605
-        versionName "1.6.1-a16fix.4"
+        versionCode 10606
+        versionName "1.6.1-a16fix.5"
         ndk {
             abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
         }

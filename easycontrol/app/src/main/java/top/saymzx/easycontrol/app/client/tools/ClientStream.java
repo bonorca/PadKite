@@ -96,7 +96,8 @@ public class ClientStream {
         }
         shell = adb.getShell();
         PublicTools.logToast("stream", "startServer isAudio=" + device.isAudio + " address=" + device.address + " serverPort=" + device.serverPort, false);
-        shell.write(ByteBuffer.wrap(("app_process -Djava.class.path=" + serverName + " / top.saymzx.easycontrol.server.Server"
+        // 忽略 SIGHUP：断开时 adb 会给 shell 发 SIGHUP，服务端不能被一起带走，要恢复分辨率后自己退出
+        shell.write(ByteBuffer.wrap(("trap '' HUP; app_process -Djava.class.path=" + serverName + " / top.saymzx.easycontrol.server.Server"
                 + " serverPort=" + device.serverPort
                 + " listenClip=" + (device.listenClip ? 1 : 0)
                 + " isAudio=" + (device.isAudio ? 1 : 0)

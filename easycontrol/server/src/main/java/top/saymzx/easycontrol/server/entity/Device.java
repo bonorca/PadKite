@@ -8,6 +8,7 @@ import android.hardware.display.VirtualDisplay;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.util.Log;
 import android.util.Pair;
 import android.view.Display;
 import android.view.IRotationWatcher;
@@ -26,6 +27,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import top.saymzx.easycontrol.server.helper.ControlPacket;
+import top.saymzx.easycontrol.server.helper.ResolutionGuard;
 import top.saymzx.easycontrol.server.helper.VideoEncode;
 import top.saymzx.easycontrol.server.wrappers.ClipboardManager;
 import top.saymzx.easycontrol.server.wrappers.DisplayManager;
@@ -62,6 +64,8 @@ public final class Device {
                 // needReset 保持 false：release() 时 fallbackResolution() 被跳过，不再触碰失败的虚拟显示
             }
         }
+        ResolutionGuard.waitPrevious();
+        ResolutionGuard.start();
         getRealSize();
         updateSize();
         // 旋转监听
@@ -91,10 +95,13 @@ public final class Device {
 
     private static void getRealSize() throws IOException, InterruptedException {
         String output = Device.execReadOutput("wm size");
-        String patStr;
-        // 查看当前分辨率
-        patStr = (output.contains("Override") ? "Override" : "Physical") + " size: (\\d+)x(\\d+)";
-        Matcher matcher = Pattern.compile(patStr).matcher(output);
+        // 有 Override 说明上次没能恢复(如平板断电)，先恢复；一律以物理分辨率为准
+        if (output.contains("Override")) {
+            Log.e("Easycontrol_Server", "Resolution: reset stale override");
+            Device.execReadOutput("wm size reset");
+            Thread.sleep(200);
+        }
+        Matcher matcher = Pattern.compile("Physical size: (\\d+)x(\\d+)").matcher(output);
         if (matcher.find()) {
             String width = matcher.group(1);
             String height = matcher.group(2);
@@ -191,11 +198,7 @@ public final class Device {
                 if (appStackId != -1)
                     Device.execReadOutput("am display move-stack " + appStackId + " " + Display.DEFAULT_DISPLAY);
                 virtualDisplay.release();
-            } else {
-                if (Device.realSize != null)
-                    Device.execReadOutput("wm size " + Device.realSize.first + "x" + Device.realSize.second);
-                else Device.execReadOutput("wm size reset");
-            }
+            } else Device.execReadOutput("wm size reset");
         }
     }
 

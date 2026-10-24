@@ -16,6 +16,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import top.saymzx.easycontrol.server.entity.Device;
 import top.saymzx.easycontrol.server.entity.Options;
@@ -43,6 +44,11 @@ public final class Server {
     private static final int timeoutDelay = 1000 * 20;
 
     public static void main(String... args) {
+        // 任何线程崩溃都走正常释放(先恢复分辨率)，默认处理会直接杀进程
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            e.printStackTrace();
+            release();
+        });
         try {
             Thread timeOutThread = new Thread(() -> {
                 try {
@@ -70,6 +76,9 @@ public final class Server {
                 threads.add(new Thread(Server::executeAudioOut));
             }
             threads.add(new Thread(Server::executeControlIn));
+            threads.add(new Thread(Server::executeKeepAliveCheck));
+            threads.add(new Thread(Server::executeShutdownCheck));
+            lastKeepAliveTime = System.currentTimeMillis();
             for (Thread thread : threads) thread.setPriority(Thread.MAX_PRIORITY);
             for (Thread thread : threads) thread.start();
             // 程序运行
@@ -147,12 +156,45 @@ public final class Server {
                 VideoEncode.encodeOut();
                 frame++;
                 // 每60帧（约1秒）发送一次userActivity防息屏
-                if (frame % 60 == 0) Device.keepActive();
-                if (frame > 120) {
-                    if (System.currentTimeMillis() - lastKeepAliveTime > timeoutDelay)
-                        throw new IOException("连接断开");
+                if (frame % 60 == 0) {
+                    Device.keepActive();
                     frame = 0;
                 }
+            }
+        } catch (Exception e) {
+            errorClose(e);
+        }
+    }
+
+    // 心跳检测单独一个线程：画面静止或网络卡死时视频线程会阻塞，放在视频循环里检测不到断线
+    private static void executeKeepAliveCheck() {
+        try {
+            while (!Thread.interrupted()) {
+                Thread.sleep(1000);
+                if (System.currentTimeMillis() - lastKeepAliveTime > timeoutDelay)
+                    throw new IOException("连接断开");
+            }
+        } catch (Exception e) {
+            errorClose(e);
+        }
+    }
+
+    // 平板关机/重启：抢在窗口服务停掉前恢复分辨率
+    // sys.shutdown.requested 是系统关机流程最开头写的，sys.powerctl 是 reboot 命令直接交给 init 的
+    private static void executeShutdownCheck() {
+        Method get;
+        String initial;
+        try {
+            get = Class.forName("android.os.SystemProperties").getMethod("get", String.class);
+            initial = get.invoke(null, "sys.shutdown.requested") + "|" + get.invoke(null, "sys.powerctl");
+        } catch (Exception e) {
+            return;
+        }
+        try {
+            while (!Thread.interrupted()) {
+                Thread.sleep(100);
+                if (!initial.equals(get.invoke(null, "sys.shutdown.requested") + "|" + get.invoke(null, "sys.powerctl")))
+                    throw new IOException("系统关机");
             }
         } catch (Exception e) {
             errorClose(e);
@@ -171,7 +213,7 @@ public final class Server {
         }
     }
 
-    private static long lastKeepAliveTime = System.currentTimeMillis();
+    private static volatile long lastKeepAliveTime = System.currentTimeMillis();
 
     private static void executeControlIn() {
         try {
@@ -259,29 +301,42 @@ public final class Server {
         videoOutputStream.write(byteBuffer.array());
     }
 
+    // 直接释放：用 notify 唤醒主线程的话，主线程还没进 wait 时出错会丢通知，服务端就一直挂着
     public static void errorClose(Exception e) {
         e.printStackTrace();
-        synchronized (object) {
-            object.notify();
-        }
+        release();
     }
 
-    // 释放资源
+    private static final AtomicBoolean isReleased = new AtomicBoolean(false);
+
+    // 释放资源：先恢复分辨率，后面哪步卡住也不影响；5秒还没退出就强制退出
+    // 不能用 synchronized：writeMain 也锁 Server.class，断网时写阻塞会让这里永远等锁
     private static void release() {
+        if (!isReleased.compareAndSet(false, true)) return;
+        Thread haltThread = new Thread(() -> {
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException ignored) {
+            }
+            Runtime.getRuntime().halt(0);
+        });
+        haltThread.setDaemon(true);
+        haltThread.start();
         for (int i = 0; i < 4; i++) {
             try {
                 switch (i) {
                     case 0:
+                        Device.fallbackResolution();
+                        break;
+                    case 1:
                         mainInputStream.close();
                         mainSocket.close();
                         videoSocket.close();
                         break;
-                    case 1:
+                    case 2:
                         VideoEncode.release();
                         AudioEncode.release();
                         break;
-                    case 2:
-                        Device.fallbackResolution();
                     case 3:
                         Runtime.getRuntime().exit(0);
                         break;
