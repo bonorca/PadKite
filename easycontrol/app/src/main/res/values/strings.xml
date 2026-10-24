@@ -50,7 +50,7 @@
 
     <string name="device_on_connect">连接时操作</string>
     <string name="device_custom_resolution_on_connect">连接时修改分辨率</string>
-    <string name="device_custom_resolution_on_connect_detail">连接时修改被控端分辨率，断开后恢复，开启后“自适应分辨率”失效</string>
+    <string name="device_custom_resolution_on_connect_detail">被控端实际渲染的分辨率，连接时修改，断开后恢复，开启后“自适应分辨率”失效</string>
     <string name="device_custom_resolution_follow">跟随本机屏幕</string>
     <string name="device_custom_resolution_follow_detail">改成本机屏幕分辨率，横竖自动对齐，关闭后可手动填写</string>
     <string name="device_wake_on_connect">连接时自动唤醒</string>
@@ -90,7 +90,7 @@
     <string name="device_is_audio">音频</string>
     <string name="device_is_audio_detail">被控端需要安卓12之上</string>
     <string name="device_max_size">分辨率</string>
-    <string name="device_max_size_detail">按本机屏幕比例分档</string>
+    <string name="device_max_size_detail">传输画面的大小，不影响被控端渲染，网络差时调低</string>
     <string name="device_max_size_native">原生</string>
     <string name="device_max_fps">最大帧率</string>
     <string name="device_max_fps_detail">最大帧率限制，值越低画面越卡顿</string>

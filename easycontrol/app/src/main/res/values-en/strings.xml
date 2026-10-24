@@ -50,7 +50,7 @@
 
     <string name="device_on_connect">Set action on connect</string>
     <string name="device_custom_resolution_on_connect">Change the resolution on connect</string>
-    <string name="device_custom_resolution_on_connect_detail">Change the remote device\'s resolution on connect and restore it on disconnect. Adaptive resolution is disabled while this is on.</string>
+    <string name="device_custom_resolution_on_connect_detail">The resolution the remote device renders at. Set on connect, restored on disconnect. Disables adaptive resolution.</string>
     <string name="device_custom_resolution_follow">Match this phone</string>
     <string name="device_custom_resolution_follow_detail">Use this phone\'s screen resolution, orientation matched automatically. Turn off to enter it manually.</string>
     <string name="device_wake_on_connect">Auto wakeup</string>
@@ -90,7 +90,7 @@
     <string name="device_is_audio">Audio</string>
     <string name="device_is_audio_detail">Works with Android 12+ </string>
     <string name="device_max_size">Resolution</string>
-    <string name="device_max_size_detail">Scaled from this phone screen</string>
+    <string name="device_max_size_detail">Size of the streamed video. Does not change what the remote device renders. Lower it on a slow network.</string>
     <string name="device_max_size_native">Native</string>
     <string name="device_max_fps">FPS</string>
     <string name="device_max_fps_detail">Frame per seconds</string>
