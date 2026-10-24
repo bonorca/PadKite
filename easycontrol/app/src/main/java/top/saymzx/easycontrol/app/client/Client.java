@@ -1,6 +1,7 @@
 package top.saymzx.easycontrol.app.client;
 
 import android.app.Dialog;
+import android.util.DisplayMetrics;
 import android.util.Pair;
 
 import java.nio.ByteBuffer;
@@ -52,8 +53,13 @@ public class Client {
                 // 启动界面
                 clientController.handleAction(device.changeToFullOnConnect ? "changeToFull" : "changeToSmall", null, 0);
                 // 运行启动时操作
-                if (device.customResolutionOnConnect)
-                    clientController.handleAction("writeByteBuffer", ControlPacket.createChangeResolutionEvent(device.customResolutionWidth, device.customResolutionHeight), 0);
+                if (device.customResolutionOnConnect) {
+                    if (device.customResolutionFollow) {
+                        DisplayMetrics screen = PublicTools.getScreenSize();
+                        clientController.handleAction("writeByteBuffer", ControlPacket.createMatchResolutionEvent(Math.max(screen.widthPixels, screen.heightPixels), Math.min(screen.widthPixels, screen.heightPixels)), 0);
+                    } else
+                        clientController.handleAction("writeByteBuffer", ControlPacket.createChangeResolutionEvent(device.customResolutionWidth, device.customResolutionHeight), 0);
+                }
                 if (!isTempDevice && device.wakeOnConnect)
                     clientController.handleAction("buttonWake", null, 0);
                 if (!isTempDevice && device.lightOffOnConnect)

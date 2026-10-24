@@ -175,6 +175,13 @@ public final class Device {
         }
     }
 
+    // 按长短边修改分辨率，横竖跟随本机(wm size 给的是自然方向)
+    public static void changeResolutionMatch(int longSide, int shortSide) {
+        if (realSize == null) return;
+        if (realSize.first >= realSize.second) changeResolution(longSide, shortSide);
+        else changeResolution(shortSide, longSide);
+    }
+
     // 恢复分辨率
     public static void fallbackResolution() throws IOException, InterruptedException {
         if (Device.needReset) {

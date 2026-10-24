@@ -16,7 +16,7 @@ import top.saymzx.easycontrol.app.entity.Device;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String dataBaseName = "app.db";
-    private static final int version = 24;
+    private static final int version = 25;
     private final String tableName = "DevicesDb";
 
     public DbHelper(Context context) {
@@ -42,6 +42,7 @@ public class DbHelper extends SQLiteOpenHelper {
         stringBuilder.append("useH265 integer,");
         stringBuilder.append("connectOnStart integer,");
         stringBuilder.append("customResolutionOnConnect integer,");
+        stringBuilder.append("customResolutionFollow integer,");
         stringBuilder.append("wakeOnConnect integer,");
         stringBuilder.append("lightOffOnConnect integer,");
         stringBuilder.append("showNavBarOnConnect integer,");
@@ -147,6 +148,7 @@ public class DbHelper extends SQLiteOpenHelper {
         values.put("useH265", device.useH265 ? 1 : 0);
         values.put("connectOnStart", device.connectOnStart ? 1 : 0);
         values.put("customResolutionOnConnect", device.customResolutionOnConnect ? 1 : 0);
+        values.put("customResolutionFollow", device.customResolutionFollow ? 1 : 0);
         values.put("wakeOnConnect", device.wakeOnConnect ? 1 : 0);
         values.put("lightOffOnConnect", device.lightOffOnConnect ? 1 : 0);
         values.put("showNavBarOnConnect", device.showNavBarOnConnect ? 1 : 0);
@@ -227,6 +229,10 @@ public class DbHelper extends SQLiteOpenHelper {
                 }
                 case "customResolutionOnConnect": {
                     device.customResolutionOnConnect = cursor.getInt(i) == 1;
+                    break;
+                }
+                case "customResolutionFollow": {
+                    device.customResolutionFollow = cursor.getInt(i) == 1;
                     break;
                 }
                 case "wakeOnConnect": {

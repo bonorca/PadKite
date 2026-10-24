@@ -241,6 +241,9 @@ public final class Server {
                         // 请求关键帧(录屏开始)：让编码器尽快输出I帧，缩短录屏首关键帧等待
                         VideoEncode.requestSyncFrame();
                         break;
+                    case 14:
+                        Device.changeResolutionMatch(mainInputStream.readInt(), mainInputStream.readInt());
+                        break;
                 }
             }
         } catch (Exception e) {

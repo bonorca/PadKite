@@ -43,6 +43,16 @@ public class Device {
         }
     }
 
+    // 本机屏幕长边，新设备默认按原生分辨率传
+    public static int screenLong() {
+        try {
+            DisplayMetrics screen = PublicTools.getScreenSize();
+            return Math.max(screen.widthPixels, screen.heightPixels);
+        } catch (Exception ignored) {
+            return 1600;
+        }
+    }
+
     public static final int TYPE_NETWORK = 1;
     public static final int TYPE_LINK = 2;
     public final String uuid;
@@ -54,12 +64,13 @@ public class Device {
     public int serverPort = 25166;
     public boolean listenClip = true;
     public boolean isAudio = true;
-    public int maxSize = 1600;
+    public int maxSize = screenLong();
     public int maxFps = 60;
     public int maxVideoBit = autoVideoBit(maxSize, maxFps);
     public boolean useH265 = true;
     public boolean connectOnStart = false;
     public boolean customResolutionOnConnect = false;
+    public boolean customResolutionFollow = true;
     public boolean wakeOnConnect = true;
     public boolean lightOffOnConnect = false;
     public boolean showNavBarOnConnect = true;
@@ -119,6 +130,7 @@ public class Device {
         newDevice.useH265 = useH265;
         newDevice.connectOnStart = connectOnStart;
         newDevice.customResolutionOnConnect = customResolutionOnConnect;
+        newDevice.customResolutionFollow = customResolutionFollow;
         newDevice.wakeOnConnect = wakeOnConnect;
         newDevice.lightOffOnConnect = lightOffOnConnect;
         newDevice.showNavBarOnConnect = showNavBarOnConnect;

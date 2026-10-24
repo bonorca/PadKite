@@ -50,7 +50,9 @@
 
     <string name="device_on_connect">连接时操作</string>
     <string name="device_custom_resolution_on_connect">连接时修改分辨率</string>
-    <string name="device_custom_resolution_on_connect_detail">手动设置分辨率，设置此项后“运行时自适应分辨率”功能失效</string>
+    <string name="device_custom_resolution_on_connect_detail">连接时修改被控端分辨率，断开后恢复，开启后“自适应分辨率”失效</string>
+    <string name="device_custom_resolution_follow">跟随本机屏幕</string>
+    <string name="device_custom_resolution_follow_detail">改成本机屏幕分辨率，横竖自动对齐，关闭后可手动填写</string>
     <string name="device_wake_on_connect">连接时自动唤醒</string>
     <string name="device_wake_on_connect_detail">连接成功后自动唤醒被控端</string>
     <string name="device_light_off_on_connect">连接时关闭背光</string>

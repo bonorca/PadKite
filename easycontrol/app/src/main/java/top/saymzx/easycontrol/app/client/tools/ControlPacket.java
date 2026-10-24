@@ -81,6 +81,16 @@ public final class ControlPacket {
         return byteBuffer;
     }
 
+    // 按本机屏幕长短边修改分辨率，横竖由被控端按自身方向决定
+    public static ByteBuffer createMatchResolutionEvent(int longSide, int shortSide) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(9);
+        byteBuffer.put((byte) 14);
+        byteBuffer.putInt(longSide);
+        byteBuffer.putInt(shortSide);
+        byteBuffer.flip();
+        return byteBuffer;
+    }
+
     // 旋转请求事件
     public static ByteBuffer createRotateEvent() {
         return ByteBuffer.wrap(new byte[]{6});

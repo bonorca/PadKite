@@ -19,6 +19,7 @@ import top.saymzx.easycontrol.app.databinding.ActivityDeviceDetailBinding;
 import top.saymzx.easycontrol.app.databinding.ItemLoadingBinding;
 import top.saymzx.easycontrol.app.databinding.ItemScanAddressListBinding;
 import top.saymzx.easycontrol.app.databinding.ItemSpinnerBinding;
+import top.saymzx.easycontrol.app.databinding.ItemSwitchBinding;
 import top.saymzx.easycontrol.app.databinding.ItemTextBinding;
 import top.saymzx.easycontrol.app.entity.AppData;
 import top.saymzx.easycontrol.app.entity.Device;
@@ -31,6 +32,8 @@ public class DeviceDetailActivity extends AppCompatActivity {
     private boolean isNew;
     private Device device;
     private ItemSpinnerBinding maxVideoBitSpinner;
+    private ItemSwitchBinding customResolutionFollowCard;
+    private boolean customResolutionOn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,12 +72,21 @@ public class DeviceDetailActivity extends AppCompatActivity {
         activityDeviceDetailBinding.startApp.setText(device.startApp);
         activityDeviceDetailBinding.adbPort.setText(String.valueOf(device.adbPort));
         activityDeviceDetailBinding.serverPort.setText(String.valueOf(device.serverPort));
-        activityDeviceDetailBinding.customResolution.setVisibility(device.customResolutionOnConnect ? View.VISIBLE : View.GONE);
         activityDeviceDetailBinding.customResolutionWidth.setText(String.valueOf(device.customResolutionWidth));
         activityDeviceDetailBinding.customResolutionHeight.setText(String.valueOf(device.customResolutionHeight));
         // 连接时操作
         activityDeviceDetailBinding.layoutOnConnect.setOnClickListener(v -> activityDeviceDetailBinding.layoutOnConnectSub.setVisibility(activityDeviceDetailBinding.layoutOnConnectSub.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
-        activityDeviceDetailBinding.layoutOnConnectSub.addView(ViewTools.createSwitchCard(this, getString(R.string.device_custom_resolution_on_connect), getString(R.string.device_custom_resolution_on_connect_detail), device.customResolutionOnConnect, isChecked -> activityDeviceDetailBinding.customResolution.setVisibility(isChecked ? View.VISIBLE : View.GONE)).getRoot(), 0);
+        customResolutionOn = device.customResolutionOnConnect;
+        customResolutionFollowCard = ViewTools.createSwitchCard(this, getString(R.string.device_custom_resolution_follow), getString(R.string.device_custom_resolution_follow_detail), device.customResolutionFollow, isChecked -> {
+            device.customResolutionFollow = isChecked;
+            updateCustomResolutionVisibility();
+        });
+        updateCustomResolutionVisibility();
+        activityDeviceDetailBinding.layoutOnConnectSub.addView(ViewTools.createSwitchCard(this, getString(R.string.device_custom_resolution_on_connect), getString(R.string.device_custom_resolution_on_connect_detail), device.customResolutionOnConnect, isChecked -> {
+            customResolutionOn = isChecked;
+            updateCustomResolutionVisibility();
+        }).getRoot(), 0);
+        activityDeviceDetailBinding.layoutOnConnectSub.addView(customResolutionFollowCard.getRoot(), 1);
         activityDeviceDetailBinding.layoutOnConnectSub.addView(ViewTools.createSwitchCard(this, getString(R.string.device_wake_on_connect), getString(R.string.device_wake_on_connect_detail), device.wakeOnConnect, isChecked -> device.wakeOnConnect = isChecked).getRoot());
         activityDeviceDetailBinding.layoutOnConnectSub.addView(ViewTools.createSwitchCard(this, getString(R.string.device_light_off_on_connect), getString(R.string.device_light_off_on_connect_detail), device.lightOffOnConnect, isChecked -> device.lightOffOnConnect = isChecked).getRoot());
         activityDeviceDetailBinding.layoutOnConnectSub.addView(ViewTools.createSwitchCard(this, getString(R.string.device_show_nav_bar_on_connect), getString(R.string.device_show_nav_bar_on_connect_detail), device.showNavBarOnConnect, isChecked -> device.showNavBarOnConnect = isChecked).getRoot());
@@ -130,6 +142,12 @@ public class DeviceDetailActivity extends AppCompatActivity {
         activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSwitchCard(this, getString(R.string.device_connect_on_start), getString(R.string.device_connect_on_start_detail), device.connectOnStart, isChecked -> device.connectOnStart = isChecked).getRoot());
     }
 
+    // 连接时修改分辨率：开启后显示「跟随本机屏幕」，关掉跟随才显示手填宽高
+    private void updateCustomResolutionVisibility() {
+        customResolutionFollowCard.getRoot().setVisibility(customResolutionOn ? View.VISIBLE : View.GONE);
+        activityDeviceDetailBinding.customResolution.setVisibility(customResolutionOn && !device.customResolutionFollow ? View.VISIBLE : View.GONE);
+    }
+
     // 最大大小或最大帧率变化后，按两者组合自动选码率，之后仍可手动修改
     private void applyAutoVideoBit() {
         device.maxVideoBit = Device.autoVideoBit(device.maxSize, device.maxFps);
@@ -162,8 +180,8 @@ public class DeviceDetailActivity extends AppCompatActivity {
             // 自定义分辨率
             String width = String.valueOf(activityDeviceDetailBinding.customResolutionWidth.getText());
             String height = String.valueOf(activityDeviceDetailBinding.customResolutionHeight.getText());
-            device.customResolutionOnConnect = false;
-            if (activityDeviceDetailBinding.customResolution.getVisibility() != View.GONE && !width.equals("") && !height.equals("")) {
+            device.customResolutionOnConnect = customResolutionOn && device.customResolutionFollow;
+            if (customResolutionOn && !device.customResolutionFollow && !width.equals("") && !height.equals("")) {
                 try {
                     int w = Integer.parseInt(width.trim());
                     int h = Integer.parseInt(height.trim());

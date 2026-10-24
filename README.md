@@ -6,6 +6,7 @@ Control an Android device from another Android device. Fork of [yutils/Easycontr
 
 - **Android 16 black screen fixed.** On Android 14+ the server mirrors the screen with `DisplayManager.createVirtualDisplay(name, width, height, displayIdToMirror, surface)`, as scrcpy does, and falls back to `SurfaceControl` if that fails.
 - **Resolution tiers follow the phone screen:** native, 80%, 60%, 40%.
+- **Change resolution on connect can match the phone.** The tablet switches to the phone's screen resolution, orientation matched automatically, and switches back on disconnect.
 - **Bitrate up to 50 Mbps.** It is picked automatically whenever resolution or FPS changes, and can still be set by hand.
 - **Update checker removed.** The `com.kotlinx:appUpdate` library and its plain-HTTP check are gone.
 - **No public signing key.** Upstream ships its keystore and password, so you build with your own key.

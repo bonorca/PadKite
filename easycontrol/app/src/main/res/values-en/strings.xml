@@ -50,7 +50,9 @@
 
     <string name="device_on_connect">Set action on connect</string>
     <string name="device_custom_resolution_on_connect">Change the resolution on connect</string>
-    <string name="device_custom_resolution_on_connect_detail">Set the resolution manually. After setting this item, the "Adaptive resolution on running" function is invalid.</string>
+    <string name="device_custom_resolution_on_connect_detail">Change the remote device\'s resolution on connect and restore it on disconnect. Adaptive resolution is disabled while this is on.</string>
+    <string name="device_custom_resolution_follow">Match this phone</string>
+    <string name="device_custom_resolution_follow_detail">Use this phone\'s screen resolution, orientation matched automatically. Turn off to enter it manually.</string>
     <string name="device_wake_on_connect">Auto wakeup</string>
     <string name="device_wake_on_connect_detail">Wake up remote device when connected</string>
     <string name="device_light_off_on_connect">Backlight off</string>
