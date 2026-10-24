@@ -8,6 +8,7 @@ public final class Options {
     public static boolean listenerClip = true;
     public static boolean isAudio = true;
     public static int maxSize = 1600;
+    public static int maxShort = 0;
     public static int maxVideoBit = 4000000;
     public static int maxFps = 60;
     public static boolean keepAwake = true;
@@ -33,6 +34,9 @@ public final class Options {
                     break;
                 case "maxSize":
                     maxSize = Integer.parseInt(value);
+                    break;
+                case "maxShort":
+                    maxShort = Integer.parseInt(value);
                     break;
                 case "maxFps":
                     maxFps = Integer.parseInt(value);

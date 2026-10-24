@@ -101,6 +101,7 @@ public class ClientStream {
                 + " listenClip=" + (device.listenClip ? 1 : 0)
                 + " isAudio=" + (device.isAudio ? 1 : 0)
                 + " maxSize=" + device.maxSize
+                + " maxShort=" + (int) (device.maxSize * Device.screenRatio())
                 + " maxFps=" + device.maxFps
                 + " maxVideoBit=" + device.maxVideoBit
                 + " keepAwake=" + (device.keepWakeOnRunning ? 1 : 0)

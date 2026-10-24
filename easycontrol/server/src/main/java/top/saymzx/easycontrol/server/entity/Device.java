@@ -112,6 +112,11 @@ public final class Device {
             minor = minor * Options.maxSize / major;
             major = Options.maxSize;
         }
+        // 短边也不超过主控端给的上限，画面就不会比主控端屏幕还大
+        if (Options.maxShort > 0 && minor > Options.maxShort) {
+            major = major * Options.maxShort / minor;
+            minor = Options.maxShort;
+        }
         // 某些厂商实现的解码器只接受16的倍数，所以需要缩放至最近参数
         minor = minor + 8 & ~15;
         major = major + 8 & ~15;

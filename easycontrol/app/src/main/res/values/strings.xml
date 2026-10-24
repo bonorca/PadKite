@@ -87,12 +87,13 @@
     <string name="device_option">参数</string>
     <string name="device_is_audio">音频</string>
     <string name="device_is_audio_detail">被控端需要安卓12之上</string>
-    <string name="device_max_size">最大大小</string>
-    <string name="device_max_size_detail">设置画面的最大大小</string>
+    <string name="device_max_size">分辨率</string>
+    <string name="device_max_size_detail">按本机屏幕比例分档</string>
+    <string name="device_max_size_native">原生</string>
     <string name="device_max_fps">最大帧率</string>
     <string name="device_max_fps_detail">最大帧率限制，值越低画面越卡顿</string>
     <string name="device_max_video_bit">最大码率</string>
-    <string name="device_max_video_bit_detail">随最大大小和帧率自动调整，也可手动选择</string>
+    <string name="device_max_video_bit_detail">随分辨率和帧率自动调整，也可手动选择</string>
     <string name="device_use_h265">使用H265</string>
     <string name="device_use_h265_detail">使用H265，视频体积小延迟低，若画面异常可尝试关闭</string>
     <string name="device_connect_on_start">软件启动时打开</string>

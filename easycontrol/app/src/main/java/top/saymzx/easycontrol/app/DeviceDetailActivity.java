@@ -3,6 +3,7 @@ package top.saymzx.easycontrol.app;
 import android.app.Dialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -57,7 +58,8 @@ public class DeviceDetailActivity extends AppCompatActivity {
     }
 
     // 绘制UI
-    private static final String[] maxSizeList = new String[]{"2560", "1920", "1600", "1280", "1024", "800"};
+    // 分辨率档位：本机屏幕同比例缩放
+    private static final int[] maxSizePercents = new int[]{100, 80, 60, 40};
     private static final String[] maxFpsList = new String[]{"90", "60", "40", "30", "20", "10"};
 
     private void drawUI() {
@@ -93,13 +95,25 @@ public class DeviceDetailActivity extends AppCompatActivity {
         activityDeviceDetailBinding.layoutOnCloseSub.addView(ViewTools.createSwitchCard(this, getString(R.string.device_reconnect_on_close), getString(R.string.device_reconnect_on_close_detail), device.reconnectOnClose, isChecked -> device.reconnectOnClose = isChecked).getRoot());
         // 参数
         activityDeviceDetailBinding.layoutOption.setOnClickListener(v -> activityDeviceDetailBinding.layoutOptionSub.setVisibility(activityDeviceDetailBinding.layoutOptionSub.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
+        DisplayMetrics screen = PublicTools.getScreenSize();
+        int screenLong = Math.max(screen.widthPixels, screen.heightPixels);
+        int screenShort = Math.min(screen.widthPixels, screen.heightPixels);
+        int[] maxSizeValues = new int[maxSizePercents.length];
+        String[] maxSizeList = new String[maxSizePercents.length];
+        int maxSizeIndex = 0;
+        for (int i = 0; i < maxSizePercents.length; i++) {
+            maxSizeValues[i] = screenLong * maxSizePercents[i] / 100;
+            maxSizeList[i] = (i == 0 ? getString(R.string.device_max_size_native) : maxSizePercents[i] + "%") + " " + maxSizeValues[i] + "×" + screenShort * maxSizePercents[i] / 100;
+            // 已保存的值不在档位里时取最接近的一档
+            if (Math.abs(maxSizeValues[i] - device.maxSize) < Math.abs(maxSizeValues[maxSizeIndex] - device.maxSize)) maxSizeIndex = i;
+        }
         ArrayAdapter<String> maxSizeAdapter = new ArrayAdapter<>(AppData.applicationContext, R.layout.item_spinner_item, maxSizeList);
         ArrayAdapter<String> maxFpsAdapter = new ArrayAdapter<>(AppData.applicationContext, R.layout.item_spinner_item, maxFpsList);
         ArrayAdapter<String> maxVideoBitAdapter = new ArrayAdapter<>(AppData.applicationContext, R.layout.item_spinner_item, Device.maxVideoBitList);
         activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSwitchCard(this, getString(R.string.device_is_audio), getString(R.string.device_is_audio_detail), device.isAudio, isChecked -> device.isAudio = isChecked).getRoot());
-        activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSpinnerCard(this, getString(R.string.device_max_size), getString(R.string.device_max_size_detail), String.valueOf(device.maxSize), maxSizeAdapter, str -> {
+        activityDeviceDetailBinding.layoutOptionSub.addView(ViewTools.createSpinnerCard(this, getString(R.string.device_max_size), getString(R.string.device_max_size_detail), maxSizeList[maxSizeIndex], maxSizeAdapter, str -> {
             // 下拉框初始化时也会回调一次，值没变就不动码率，免得覆盖手动选的码率
-            int value = Integer.parseInt(str);
+            int value = maxSizeValues[Arrays.asList(maxSizeList).indexOf(str)];
             if (value == device.maxSize) return;
             device.maxSize = value;
             applyAutoVideoBit();

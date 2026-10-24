@@ -1,16 +1,20 @@
 package top.saymzx.easycontrol.app.entity;
 
+import android.util.DisplayMetrics;
+
 import java.util.Objects;
+
+import top.saymzx.easycontrol.app.helper.PublicTools;
 
 public class Device {
     // 可选码率(Mbps)，从高到低
     public static final String[] maxVideoBitList = new String[]{"50", "40", "30", "25", "20", "16", "12", "10", "8", "6", "4", "2", "1"};
 
     // 按最大大小和最大帧率推荐码率(Mbps)，算法参考 Moonlight 的默认码率：按像素数在常见分辨率之间插值，
-    // 60帧以上按平方根增长。这里只知道长边，短边按 16:10 估算。结果取 maxVideoBitList 中最接近的一档
+    // 60帧以上按平方根增长。短边按本机屏幕比例算(和分辨率档位一致)。结果取 maxVideoBitList 中最接近的一档
     public static int autoVideoBit(int maxSize, int maxFps) {
         int[][] table = new int[][]{{640 * 360, 1}, {854 * 480, 2}, {1280 * 720, 5}, {1920 * 1080, 10}, {2560 * 1440, 20}, {3840 * 2160, 40}};
-        double pixels = (double) maxSize * (maxSize * 10 / 16);
+        double pixels = (double) maxSize * (int) (maxSize * screenRatio());
         double resolutionFactor = table[table.length - 1][1];
         if (pixels <= table[0][0]) resolutionFactor = table[0][1];
         else for (int i = 1; i < table.length; i++) {
@@ -27,6 +31,16 @@ public class Device {
             if (Math.abs(Math.log(value / target)) < Math.abs(Math.log(best / target))) best = value;
         }
         return best;
+    }
+
+    // 本机屏幕的短边/长边，拿不到屏幕信息时按 16:10
+    public static float screenRatio() {
+        try {
+            DisplayMetrics screen = PublicTools.getScreenSize();
+            return (float) Math.min(screen.widthPixels, screen.heightPixels) / Math.max(screen.widthPixels, screen.heightPixels);
+        } catch (Exception ignored) {
+            return 0.625f;
+        }
     }
 
     public static final int TYPE_NETWORK = 1;

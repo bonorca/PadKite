@@ -88,7 +88,8 @@
     <string name="device_is_audio">Audio</string>
     <string name="device_is_audio_detail">Works with Android 12+ </string>
     <string name="device_max_size">Resolution</string>
-    <string name="device_max_size_detail">Set max resolution</string>
+    <string name="device_max_size_detail">Scaled from this phone screen</string>
+    <string name="device_max_size_native">Native</string>
     <string name="device_max_fps">FPS</string>
     <string name="device_max_fps_detail">Frame per seconds</string>
     <string name="device_max_video_bit">Bitrate</string>
