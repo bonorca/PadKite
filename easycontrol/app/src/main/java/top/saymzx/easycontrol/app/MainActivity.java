@@ -14,7 +14,6 @@ import android.provider.Settings;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.kotlinx.appUpdate.AppUpdate;
 
 import java.io.InputStream;
 
@@ -68,14 +67,7 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState != null) {
             checkUpdate = savedInstanceState.getBoolean("checkUpdate", false);
         }
-        if (checkUpdate) {
-            //更新地址
-            AppUpdate.baseUrl = "http://apk.kotlinx.com:9999";
-            AppUpdate.showCheckUpdateErrorToast = false;
-            AppUpdate apk = new AppUpdate();
-            apk.checkAndUpdate(this);
-            checkUpdate = false;
-        }
+        checkUpdate = false;
     }
 
     // 主动申请运行时所需权限

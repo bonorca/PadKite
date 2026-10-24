@@ -1,100 +1,117 @@
-# 易控 EasyControl
+# EasyControl: Android 16 black-screen fix
 
-> 安卓端控制安卓端的远程投屏工具，基于 Scrcpy 协议魔改实现。
+Control one Android device from another over ADB with low latency, based on the scrcpy protocol.
 
-本项目 Fork 自 [mingzhixian/Easycontrol](https://github.com/mingzhixian/Easycontrol)，在此对原作者表示衷心感谢。原项目已多年未更新，本项目在其基础上进行了大量现代化改造与 Bug 修复，并将持续维护。
+This is a patched fork of [yutils/Easycontrol](https://github.com/yutils/Easycontrol) 1.6.1, which is itself a fork of [mingzhixian/Easycontrol](https://github.com/mingzhixian/Easycontrol). It fixes the black video you get when the **controlled** device runs Android 16. Input still works in that case, but the picture never shows up.
 
-**永久免费 · 开源 · 持续维护**
-
-| ![Img1](pic/screenshot/1.jpg) | ![Img1](pic/screenshot/3.jpg) | ![Img1](pic/screenshot/5.jpg) |
+| ![Screenshot](pic/screenshot/1.jpg) | ![Screenshot](pic/screenshot/3.jpg) | ![Screenshot](pic/screenshot/5.jpg) |
 | -- | -- | -- |
 
+## The problem
 
-## 与原版的差异
-### 一、概要
-- 移除捐赠 / 激活逻辑，永久免费使用
-- 兼容被控端为安卓15以上系统
-- Scrcpy升级到最新版
-- 新增新增远程截图
-- 新增虚拟鼠标
-- 新增远程音量调节功能 （可配置断开后设备静音）
-- 新增设备状态面板
+With upstream 1.6.1 on an Android 16 device, the session connects and touch input works, but the video stays black. Turning off H.265, lowering the resolution or the frame rate makes no difference. The toolbar screenshot does work, but only because it falls back to `screencap`, which is a separate path.
 
-### 二、UI 全面现代化
-- 引入appcompat主题（APK体积变大）
-- 全新设计语言：绿色主调色彩系统，支持深色模式
-- 精细化尺寸系统：统一字号、间距、圆角、阴影层次
-- 卡片式布局：圆角卡片 + 细描边，视觉更清爽
-- Ripple 涟漪反馈：所有可点击元素带触摸反馈
-- 重做全部核心页面：首页、设备详情、设置、投屏、悬浮窗、加载弹窗、对话框
-- 投屏界面统一半透明深色浮层 + 白色图标，关闭键红色高亮
-- 开关组件适配主题色（开启绿色 / 关闭灰色，不再与背景融为一体）
-- 横竖屏自适应布局优化
+The cause is in screen capture, not in encoding. The server creates a display with `SurfaceControl`. On Android 15 and later it reaches that code through the internal `com.android.server.display.DisplayControl` class, loaded from `services.jar`. On Android 16 the display is created without any error, but nothing is ever drawn into it. The encoder only gets empty frames, so the encoding settings don't matter.
 
-### 三、Android 15 适配
-- 适配 `SurfaceControl` API 变更：`createDisplay`/`destroyDisplay` 迁移至 `DisplayControl.createVirtualDisplay`/`destroyVirtualDisplay`
-- 适配 `SurfaceControl` 静态方法移除：`setDisplaySurface`/`setDisplayProjection`/`setDisplayLayerStack` 改用 `SurfaceControl.Transaction` 对象（仅 Android 15+ 启用，Android 14 及以下保留静态方法，兼容性最佳）
-- 适配 `AudioRecord` 的 `native_setup` 签名变更（Android 14 QPR3 / 15）
-- 适配 `WindowManager` 的 `caller` 参数变更
+## The fix
 
-### 四、Scrcpy 协议同步至 v4.x
-- 低延迟编码参数：`KEY_PRIORITY`、`KEY_LATENCY`
-- 非侵入式防息屏：使用 `PowerManager.userActivity` 替代修改 `screen_off_timeout`
-- 视频编码参数优化
+On Android 14 and later, the server now mirrors the screen with the hidden static API that upstream scrcpy uses:
 
-### 五、Bug 修复（40+ 项）
-- 崩溃与资源泄漏
-- 逻辑错误
-- 连接稳定性
-
-### 六、功能调整
-- 启动时主动申请所需权限（悬浮窗、文件读取、前台服务、通知）
-- 设备名称默认按序号命名（设备1、设备2、设备3）
-- 首页设备列表同时显示设备名称与 IP 地址
-- 加载弹窗重构为正方形布局，显示"加载中"
-
-## 七、功能特色
-- 使用简单
-- 支持音频传输
-- 多设备连接
-- 支持有线连接
-- 多设备剪切板同步
-- 多设备共享主控端物理键盘
-- 启动迅速，低延迟
-- 支持分辨率自适应
-- 良好的旋转支持
-- 支持小窗显示与全屏显示
-- Android 14 / 15 完整适配
-
-## 八、构建
-- gradle构建环境升级的最新版
-- 升级到java17
-本项目使用 Android Studio + Gradle 构建。如需自行编译：
-
-```bash
-# Windows
-.\easycontrol\gradlew.bat assembleDebug -p easycontrol
-
-# Linux / macOS
-./easycontrol/gradlew assembleDebug -p easycontrol
+```java
+android.hardware.display.DisplayManager.createVirtualDisplay(
+        String name, int width, int height, int displayIdToMirror, Surface surface)
 ```
 
-编译产物：`easycontrol/app/build/outputs/apk/debug/app-debug.apk`
+The system creates a virtual display that mirrors the main display and renders straight into the encoder's input surface. If this call fails, the server falls back to the original `SurfaceControl` path. Android 13 and older are unchanged.
 
-## 相关项目
+## Changes from upstream 1.6.1
 
-- **原项目**：[mingzhixian/Easycontrol](https://github.com/mingzhixian/Easycontrol) — 致敬原作者
-- **Scrcpy**：[Genymobile/scrcpy](https://github.com/Genymobile/scrcpy) — 本项目基于的投屏协议
-- **ADB 协议文档**：[cstyan/adbDocumentation](https://github.com/cstyan/adbDocumentation)
+- **Screen capture:** the DisplayManager mirror described above, in `server/.../helper/VideoEncode.java` and `server/.../wrappers/DisplayManager.java`. The server also logs which capture path it used (see Troubleshooting).
+- **Update checker removed:** upstream includes `com.kotlinx:appUpdate`, which contacts `http://apk.kotlinx.com:9999` on every launch over plain HTTP. It can force updates, and its checksum check can be skipped. This fork removes the library and the call.
+- **Public signing key removed:** upstream commits `app/doc/yujingtest.jks` together with its password (`123456`). Anyone can use that key to sign an APK that installs over yours as an "update". This fork does not ship a key, so you build with your own (see Building).
+- **Version bumped to 10602 / `1.6.1-a16fix`:** the client pushes the server to `/data/local/tmp/easycontrol_server_<versionCode>.jar`. Release builds skip the push when a file with that name already exists. Without the bump, a device that has run 1.6.1 keeps the old, unpatched server. **If you change server code, bump `versionCode` too.**
 
-## 开源协议
+## Building
 
-遵循原项目开源协议，保留原作者版权声明。
+Requirements:
 
-## 反馈
+- JDK 21. The JBR that ships with Android Studio works.
+- Android SDK with platforms 34 and 35.
 
-请在 GitHub 提出 Issue：[https://github.com/yutils/Easycontrol/issues](https://github.com/yutils/Easycontrol/issues)
+1. Tell Gradle where the SDK is. Either set `ANDROID_HOME`, or create `easycontrol/local.properties`:
 
-## 项目地址
+   ```properties
+   sdk.dir=C:/Users/you/AppData/Local/Android/Sdk
+   ```
 
-**GitHub**：[https://github.com/yutils/Easycontrol](https://github.com/yutils/Easycontrol)
+2. Generate your own signing key once and keep it. Later builds must be signed with the same key, or you will have to uninstall before every update.
+
+   ```bash
+   keytool -genkeypair -keystore easycontrol/app/doc/yujingtest.jks -storetype JKS \
+     -alias test -keyalg RSA -keysize 2048 -validity 10000 \
+     -storepass 123456 -keypass 123456 -dname "CN=private"
+   ```
+
+   The file name, alias and password match what `app/build.gradle` expects. What actually protects you is keeping the key file private: `*.jks` under `app/doc` is git-ignored. If you want a different password, change it in `app/build.gradle` as well.
+
+3. Build:
+
+   ```bash
+   # Windows
+   .\easycontrol\gradlew.bat --no-daemon assembleRelease -p easycontrol
+
+   # Linux / macOS
+   ./easycontrol/gradlew --no-daemon assembleRelease -p easycontrol
+   ```
+
+   Output: `easycontrol/app/build/outputs/apk/release/Yikong•Yuji_v1.6.1-a16fix_release.apk`
+
+## Installing
+
+- Install the APK on the **controlling** device only. The client pushes the server to the controlled device over ADB.
+- The controlled device needs ADB over the network: wireless debugging, or `adb tcpip 5555`.
+- If an upstream build is installed, uninstall it first, because the signatures differ. Uninstalling clears your saved devices.
+- On the first connection, the controlled device asks you to authorize the client's ADB key. Tick "Always allow from this computer". You need the device in your hands for this step.
+- On Android 13 and later you may need to "Allow restricted settings" for the sideloaded app before you can grant the overlay permission.
+
+## Troubleshooting
+
+Run this on the controlled device:
+
+```bash
+adb logcat -d -s Easycontrol_Server
+```
+
+| Log line | Meaning |
+| -- | -- |
+| `Display: using DisplayManager mirror` | The new capture path is active. |
+| `DisplayManager mirror failed, falling back to SurfaceControl: ...` | The mirror failed; the exception explains why. |
+| `Display: using SurfaceControl` | The old path is in use (Android 13 or older, or after the failure above). |
+
+## Security notes
+
+- The server listens on TCP port 25166 on every network interface, with no authentication and no encryption. Whoever connects first gets control. **Never expose 25166 or the ADB port to the internet.** For remote use, reach your home network through a VPN such as WireGuard.
+- Known issue, not yet fixed: the client's exported broadcast receiver has a weak caller check. Exploiting it needs a malicious app on the same device, so the risk is low.
+
+## Tested on
+
+- Controller: OnePlus 12R
+- Controlled: OnePlus Pad 3 (Android 16)
+
+No other devices have been tested.
+
+## Usage and features
+
+The upstream usage guide is in [HOW_TO_USE.md](HOW_TO_USE.md) (Chinese).
+
+Features inherited from upstream include audio forwarding, multiple devices, wired connections, clipboard sync, sharing the controller's physical keyboard, adaptive resolution, rotation, windowed and full-screen modes, remote screenshots, a virtual mouse, remote volume control and a device status panel.
+
+## Credits
+
+- [mingzhixian/Easycontrol](https://github.com/mingzhixian/Easycontrol): the original project
+- [yutils/Easycontrol](https://github.com/yutils/Easycontrol): the fork this one is based on (Android 15 support, UI rework, many fixes)
+- [Genymobile/scrcpy](https://github.com/Genymobile/scrcpy): the protocol, and the DisplayManager capture approach used here
+
+## License
+
+GPL-3.0, the same as upstream. See [LICENSE](LICENSE). Upstream copyright notices are kept. This fork's modifications are listed above and in the git history.

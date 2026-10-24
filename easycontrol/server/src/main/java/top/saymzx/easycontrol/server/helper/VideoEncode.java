@@ -4,6 +4,7 @@
 package top.saymzx.easycontrol.server.helper;
 
 import android.graphics.Rect;
+import android.hardware.display.VirtualDisplay;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
@@ -11,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.system.ErrnoException;
+import android.util.Log;
 import android.view.Surface;
 
 import java.io.IOException;
@@ -20,6 +22,7 @@ import java.nio.ByteBuffer;
 import top.saymzx.easycontrol.server.Server;
 import top.saymzx.easycontrol.server.entity.Device;
 import top.saymzx.easycontrol.server.entity.Options;
+import top.saymzx.easycontrol.server.wrappers.DisplayManager;
 import top.saymzx.easycontrol.server.wrappers.SurfaceControl;
 
 public final class VideoEncode {
@@ -29,6 +32,7 @@ public final class VideoEncode {
     private static boolean useH265;
 
     private static IBinder display;
+    private static VirtualDisplay mirrorDisplay;
 
     public static void init() throws InvocationTargetException, NoSuchMethodException, IllegalAccessException, IOException, ErrnoException {
         useH265 = Options.supportH265 && EncodecTools.isSupportH265();
@@ -39,8 +43,7 @@ public final class VideoEncode {
         byteBuffer.putInt(Device.videoSize.second);
         byteBuffer.flip();
         Server.writeVideo(byteBuffer);
-        // 创建显示器
-        display = SurfaceControl.createDisplay("easycontrol", Build.VERSION.SDK_INT < Build.VERSION_CODES.R || (Build.VERSION.SDK_INT == Build.VERSION_CODES.R && !"S".equals(Build.VERSION.CODENAME)));
+        // display is created lazily in bindDisplay()
         // 创建Codec
         createEncodecFormat();
         startEncode();
@@ -80,15 +83,45 @@ public final class VideoEncode {
         encedec.configure(encodecFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         // 绑定Display和Surface
         surface = encedec.createInputSurface();
-        setDisplaySurface(display, surface);
+        bindDisplay();
         // 启动编码
         encedec.start();
     }
 
     public static void stopEncode() {
+        releaseMirrorDisplay();
         encedec.stop();
         encedec.reset();
         surface.release();
+    }
+
+    private static void bindDisplay() throws InvocationTargetException, NoSuchMethodException, IllegalAccessException, IOException, ErrnoException {
+        releaseMirrorDisplay();
+        if (display == null && Build.VERSION.SDK_INT >= 34) {
+            try {
+                mirrorDisplay = DisplayManager.createMirrorDisplay("easycontrol", Device.videoSize.first, Device.videoSize.second, Device.displayInfo.displayId, surface);
+                if (mirrorDisplay != null) {
+                    Log.i("Easycontrol_Server", "Display: using DisplayManager mirror");
+                    return;
+                }
+            } catch (Exception e) {
+                Log.e("Easycontrol_Server", "DisplayManager mirror failed, falling back to SurfaceControl: " + e);
+            }
+        }
+        if (display == null)
+            display = SurfaceControl.createDisplay("easycontrol", Build.VERSION.SDK_INT < Build.VERSION_CODES.R || (Build.VERSION.SDK_INT == Build.VERSION_CODES.R && !"S".equals(Build.VERSION.CODENAME)));
+        setDisplaySurface(display, surface);
+        Log.i("Easycontrol_Server", "Display: using SurfaceControl");
+    }
+
+    private static void releaseMirrorDisplay() {
+        if (mirrorDisplay != null) {
+            try {
+                mirrorDisplay.release();
+            } catch (Exception ignored) {
+            }
+            mirrorDisplay = null;
+        }
     }
 
     private static void setDisplaySurface(IBinder display, Surface surface) throws InvocationTargetException, NoSuchMethodException, IllegalAccessException {
@@ -135,7 +168,7 @@ public final class VideoEncode {
         try {
             stopEncode();
             encedec.release();
-            SurfaceControl.destroyDisplay(display);
+            if (display != null) SurfaceControl.destroyDisplay(display);
         } catch (Exception ignored) {
         }
     }

@@ -47,6 +47,15 @@ public final class DisplayManager {
         }
     }
 
+    private static java.lang.reflect.Method createMirrorDisplayMethod;
+
+    // Android 14+ hidden static API: mirror a display into a surface (same approach as upstream scrcpy)
+    public static VirtualDisplay createMirrorDisplay(String name, int width, int height, int displayIdToMirror, Surface surface) throws Exception {
+        if (createMirrorDisplayMethod == null)
+            createMirrorDisplayMethod = android.hardware.display.DisplayManager.class.getMethod("createVirtualDisplay", String.class, int.class, int.class, int.class, Surface.class);
+        return (VirtualDisplay) createMirrorDisplayMethod.invoke(null, name, width, height, displayIdToMirror, surface);
+    }
+
     public static DisplayInfo getDisplayInfo(int displayId) {
         try {
             Object displayInfo = manager.getClass().getMethod("getDisplayInfo", int.class).invoke(manager, displayId);
