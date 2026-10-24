@@ -3,6 +3,7 @@ package top.saymzx.easycontrol.app.client.tools;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.SystemClock;
 import android.util.Pair;
 import android.view.Surface;
 
@@ -31,7 +32,7 @@ public class ClientPlayer {
     private static final int SCREENSHOT_EVENT = 5;
     // 心跳超时检测：超过该时间未收到任何数据(含心跳响应)则认为连接断开
     private static final int KEEP_ALIVE_TIMEOUT = 1000 * 10;
-    private volatile long lastReceiveTime = System.currentTimeMillis();
+    private volatile long lastReceiveTime = SystemClock.elapsedRealtime();
     // 正在接收大载荷(如截图PNG)：此时连接仍是活的，只是主流被阻塞在整段读取，须暂停心跳超时判定
     private volatile boolean receivingLargePayload = false;
 
@@ -67,11 +68,11 @@ public class ClientPlayer {
             PublicTools.logToast("player", "audio flag=" + audioFlag, false);
             if (audioFlag == 1)
                 useOpus = clientStream.readByteFromMain() == 1;
-            lastReceiveTime = System.currentTimeMillis();
+            lastReceiveTime = SystemClock.elapsedRealtime();
             // 循环处理报文
             while (!Thread.interrupted()) {
                 byte type = clientStream.readByteFromMain();
-                lastReceiveTime = System.currentTimeMillis();
+                lastReceiveTime = SystemClock.elapsedRealtime();
                 switch (type) {
                     case AUDIO_EVENT:
                         ByteBuffer audioFrame = clientStream.readFrameFromMain();
@@ -201,6 +202,6 @@ public class ClientPlayer {
 
     // 检查心跳是否超时（连接异常断开）
     public boolean isKeepAliveTimeout() {
-        return !receivingLargePayload && System.currentTimeMillis() - lastReceiveTime > KEEP_ALIVE_TIMEOUT;
+        return !receivingLargePayload && SystemClock.elapsedRealtime() - lastReceiveTime > KEEP_ALIVE_TIMEOUT;
     }
 }

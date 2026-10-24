@@ -47,6 +47,8 @@ public class Client {
                     return;
                 }
                 AppData.uiHandler.post(ClientService::update);
+                // 从后台发起的连接(如断线重连)系统可能不让启动前台服务，等悬浮窗出来后再试一次
+                AppData.uiHandler.postDelayed(ClientService::update, 2000);
                 // 控制器、播放器
                 clientController = new ClientController(device, clientStream, () -> clientPlayer = new ClientPlayer(device.uuid, clientStream));
                 // 临时设备

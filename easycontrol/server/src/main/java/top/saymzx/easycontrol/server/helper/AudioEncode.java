@@ -33,7 +33,7 @@ public final class AudioEncode {
             audioCapture = AudioCapture.init();
         } catch (Exception e) {
             Log.e("Easycontrol_Server", "AudioEncode init failed: " + e);
-            e.printStackTrace();
+            android.util.Log.e("Easycontrol_Server", "audio", e);
             Server.writeMain(ByteBuffer.wrap(bytes));
             return false;
         }

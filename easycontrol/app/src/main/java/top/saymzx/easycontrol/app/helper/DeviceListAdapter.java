@@ -148,8 +148,8 @@ public class DeviceListAdapter extends BaseAdapter {
     private void reset(Device device) {
         Pair<ItemLoadingBinding, Dialog> loading = ViewTools.createLoading(context);
         loading.second.show();
-        // density 按服务端留下的备份恢复(可能是用户自己调的"显示大小")
-        String cmd = "wm size reset; f=/data/local/tmp/easycontrol-density; if [ -f $f ]; then wm density $(cat $f) && rm $f; fi";
+        // 有服务端留下的备份就按它恢复(可能是用户自己的"显示大小"或系统分辨率设置)，没有就重置分辨率
+        String cmd = "f=/data/local/tmp/easycontrol-display; if [ -f $f ]; then read s d < $f && wm size $s && wm density $d && rm $f; else wm size reset; fi";
         AdbTools.runOnceCmd(device, cmd, result -> AppData.uiHandler.post(() -> {
             ViewTools.dismiss(loading.second);
             Toast.makeText(context, context.getString(result ? R.string.toast_success : R.string.toast_fail), Toast.LENGTH_SHORT).show();

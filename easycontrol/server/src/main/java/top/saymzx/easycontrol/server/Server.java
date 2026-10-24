@@ -6,6 +6,10 @@ package top.saymzx.easycontrol.server;
 import android.annotation.SuppressLint;
 import android.os.IBinder;
 import android.os.IInterface;
+import android.os.SystemClock;
+import android.system.Os;
+import android.system.OsConstants;
+import android.util.Log;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -41,6 +45,7 @@ public final class Server {
 
     private static final Object object = new Object();
 
+    private static final String TAG = "Easycontrol_Server";
     private static final int timeoutDelay = 1000 * 20;
     // 客户端每2秒发一次心跳、10秒收不到数据就自己断开，服务端等更久没有意义
     private static final int keepAliveTimeout = 1000 * 10;
@@ -48,7 +53,7 @@ public final class Server {
     public static void main(String... args) {
         // 任何线程崩溃都走正常释放(先恢复分辨率)，默认处理会直接杀进程
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
-            e.printStackTrace();
+            Log.e(TAG, "uncaught in " + t.getName(), e);
             release();
         });
         try {
@@ -67,7 +72,6 @@ public final class Server {
             Device.init();
             // 连接
             connectClient();
-            isConnected = true;
             // 初始化子服务
             boolean canAudio = AudioEncode.init();
             VideoEncode.init();
@@ -81,7 +85,7 @@ public final class Server {
             threads.add(new Thread(Server::executeControlIn));
             threads.add(new Thread(Server::executeKeepAliveCheck));
             threads.add(new Thread(Server::executeShutdownCheck));
-            lastKeepAliveTime = System.currentTimeMillis();
+            lastKeepAliveTime = SystemClock.elapsedRealtime();
             for (Thread thread : threads) thread.setPriority(Thread.MAX_PRIORITY);
             for (Thread thread : threads) thread.start();
             // 程序运行
@@ -92,7 +96,7 @@ public final class Server {
             // 终止子服务
             for (Thread thread : threads) thread.interrupt();
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "main", e);
         } finally {
             // 释放资源
             release();
@@ -174,7 +178,8 @@ public final class Server {
         try {
             while (!Thread.interrupted()) {
                 Thread.sleep(1000);
-                if (System.currentTimeMillis() - lastKeepAliveTime > keepAliveTimeout)
+                // 单调时钟：系统对时跳变不会误判断线
+                if (SystemClock.elapsedRealtime() - lastKeepAliveTime > keepAliveTimeout)
                     throw new IOException("连接断开");
             }
         } catch (Exception e) {
@@ -195,7 +200,7 @@ public final class Server {
         }
         try {
             while (!Thread.interrupted()) {
-                Thread.sleep(100);
+                Thread.sleep(50);
                 if (!initial.equals(get.invoke(null, "sys.shutdown.requested") + "|" + get.invoke(null, "sys.powerctl"))) {
                     isShutdown = true;
                     throw new IOException("系统关机");
@@ -218,7 +223,7 @@ public final class Server {
         }
     }
 
-    private static volatile long lastKeepAliveTime = System.currentTimeMillis();
+    private static volatile long lastKeepAliveTime = SystemClock.elapsedRealtime();
 
     private static void executeControlIn() {
         try {
@@ -234,9 +239,19 @@ public final class Server {
                         ControlPacket.handleClipboardEvent();
                         break;
                     case 4:
-                        lastKeepAliveTime = System.currentTimeMillis();
-                        // 回复心跳响应，让客户端检测连接状态
-                        Server.writeMain(ByteBuffer.wrap(new byte[]{4}));
+                        lastKeepAliveTime = SystemClock.elapsedRealtime();
+                        // 收到第一个心跳才算会话建立：客户端没真正连上就放弃的连接，断开时不做锁定/静音
+                        isConnected = true;
+                        // 回复心跳放到别的线程，同时最多一个：慢网时主通道的写(截图、音频)会阻塞很久，
+                        // 读线程卡在写上就读不到后面的心跳，会被误判断线
+                        if (isReplyingKeepAlive.compareAndSet(false, true)) new Thread(() -> {
+                            try {
+                                writeMain(ByteBuffer.wrap(new byte[]{4}));
+                            } catch (IOException ignored) {
+                            } finally {
+                                isReplyingKeepAlive.set(false);
+                            }
+                        }).start();
                         break;
                     case 5:
                         Device.changeResolution(mainInputStream.readFloat());
@@ -298,6 +313,8 @@ public final class Server {
         }
     }
 
+    private static final AtomicBoolean isReplyingKeepAlive = new AtomicBoolean(false);
+
     public synchronized static void writeMain(ByteBuffer byteBuffer) throws IOException {
         mainOutputStream.write(byteBuffer.array());
     }
@@ -307,8 +324,9 @@ public final class Server {
     }
 
     // 直接释放：用 notify 唤醒主线程的话，主线程还没进 wait 时出错会丢通知，服务端就一直挂着
+    // 只写 logcat：stderr 接在 adb 的终端上，断网时可能写满阻塞，恢复就开始不了
     public static void errorClose(Exception e) {
-        e.printStackTrace();
+        Log.e(TAG, "close: " + e);
         release();
     }
 
@@ -320,12 +338,17 @@ public final class Server {
     // 不能用 synchronized：writeMain 也锁 Server.class，断网时写阻塞会让这里永远等锁
     private static void release() {
         if (!isReleased.compareAndSet(false, true)) return;
+        // 用 SIGKILL 不用 Runtime.halt：halt 和 exit 共用一把锁，exit 卡住时 halt 也进不去
         Thread haltThread = new Thread(() -> {
             try {
                 Thread.sleep(5000);
             } catch (InterruptedException ignored) {
             }
-            Runtime.getRuntime().halt(0);
+            try {
+                Os.kill(Os.getpid(), OsConstants.SIGKILL);
+            } catch (Exception e) {
+                Runtime.getRuntime().halt(0);
+            }
         });
         haltThread.setDaemon(true);
         haltThread.start();
@@ -333,7 +356,7 @@ public final class Server {
             try {
                 switch (i) {
                     case 0:
-                        Device.fallbackResolution();
+                        Device.fallbackResolution(isShutdown);
                         break;
                     case 1:
                         // 关机时不用做

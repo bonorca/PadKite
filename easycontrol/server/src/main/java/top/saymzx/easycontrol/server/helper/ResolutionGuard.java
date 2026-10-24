@@ -11,16 +11,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 import top.saymzx.easycontrol.server.entity.Device;
+import top.saymzx.easycontrol.server.wrappers.WindowManager;
 
 // 分辨率兜底：服务端不管怎么结束(被杀、崩溃、kill -9)，都由独立的守护进程把分辨率恢复
 public final class ResolutionGuard {
     private static final String NAME = "easycontrol_guard";
-    // 修改前的 density 存在平板上：用户在设置里调过"显示大小"就是个 Override，不能简单 reset；
-    // 断电、被杀后由守护进程或下次连接按它恢复。不能叫 easycontrol_*，客户端换版本时会 rm easycontrol_*
-    private static final String DENSITY_BACKUP = "/data/local/tmp/easycontrol-density";
-    // stdin 接在服务端上，服务端一退出就读到 EOF，随即恢复分辨率和 density；系统服务重启时会失败，重试一分钟
-    private static final String SCRIPT = "exec >/dev/null 2>&1; read x; f=" + DENSITY_BACKUP + "; i=0;"
-            + " until wm size reset && { [ ! -f $f ] || { wm density $(cat $f) && rm $f; }; }; do i=$((i+1)); [ $i -ge 60 ] && break; sleep 1; done";
+    // 改之前的分辨率和 density 存在平板上，内容是 "<size> <density>"，各自是 reset 或原来的 Override
+    // (用户调的"显示大小"、系统的屏幕分辨率设置)。文件在才说明是我们改过，所有恢复都只按它来，不碰别人设的值。
+    // 不能叫 easycontrol_*，客户端换版本时会 rm easycontrol_*
+    private static final String BACKUP = "/data/local/tmp/easycontrol-display";
+    // stdin 接在服务端上，服务端一退出就读到 EOF。没有备份说明服务端已恢复，直接退出；
+    // 有备份就先等 1 秒，让被杀的服务端还没跑完的 wm 命令先落地，再按备份恢复；系统服务重启时会失败，重试一分钟
+    private static final String SCRIPT = "exec >/dev/null 2>&1; read x; f=" + BACKUP + "; [ -f $f ] || exit 0; sleep 1; i=0;"
+            + " until read s d < $f && wm size $s && wm density $d && rm $f; do i=$((i+1)); [ $i -ge 60 ] && break; sleep 1; done";
     // 必须一直持有，否则管道被回收关闭，守护进程会提前恢复
     private static Process process;
 
@@ -46,30 +49,40 @@ public final class ResolutionGuard {
         }
     }
 
-    // 只记第一次改之前的值，同一会话再改分辨率不覆盖；先写临时文件再改名，断电也不会留下半个文件
-    public static void backupDensity(String original) {
-        File backup = new File(DENSITY_BACKUP);
-        if (backup.exists()) return;
-        File tmp = new File(DENSITY_BACKUP + ".tmp");
+    // 只记第一次改之前的值，同一会话再改分辨率不覆盖；先写临时文件再改名，断电也不会留下半个文件。
+    // 返回 false 时不能改分辨率，否则恢复时不知道原值
+    public static boolean backup(String size, String density) {
+        File backup = new File(BACKUP);
+        if (backup.exists()) return true;
+        File tmp = new File(BACKUP + ".tmp");
         try (FileOutputStream out = new FileOutputStream(tmp)) {
-            out.write(original.getBytes());
+            out.write((size + " " + density + "\n").getBytes());
             out.getFD().sync();
         } catch (Exception e) {
-            return;
+            return false;
         }
-        tmp.renameTo(backup);
+        return tmp.renameTo(backup);
     }
 
-    public static void restoreDensity() throws IOException, InterruptedException {
-        File backup = new File(DENSITY_BACKUP);
+    // isShutdown：平板正在关机/重启。直接调窗口服务抢时间；备份留着，系统来不及把设置写盘的话，下次连接再按它恢复一遍
+    public static void restore(boolean isShutdown) throws IOException, InterruptedException {
+        File backup = new File(BACKUP);
         if (!backup.exists()) return;
-        String density;
+        String content;
         try (FileInputStream in = new FileInputStream(backup)) {
-            byte[] buffer = new byte[32];
+            byte[] buffer = new byte[64];
             int len = in.read(buffer);
-            density = len > 0 ? new String(buffer, 0, len).trim() : "";
+            content = len > 0 ? new String(buffer, 0, len).trim() : "";
         }
-        if (density.equals("reset") || density.matches("\\d+")) Device.execReadOutput("wm density " + density);
+        String[] parts = content.split("\\s+");
+        boolean isValid = parts.length == 2 && parts[0].matches("reset|\\d+x\\d+") && parts[1].matches("reset|\\d+");
+        if (isShutdown) {
+            if (isValid && !WindowManager.setDisplay(parts[0], parts[1]))
+                Device.execReadOutput("wm size " + parts[0] + " && wm density " + parts[1]);
+            return;
+        }
+        // 内容坏了没法恢复，删掉免得每次连接都卡在这
+        if (isValid) Device.execReadOutput("wm size " + parts[0] + " && wm density " + parts[1]);
         backup.delete();
     }
 

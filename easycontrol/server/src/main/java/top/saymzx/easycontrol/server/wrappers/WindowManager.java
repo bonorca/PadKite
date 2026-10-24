@@ -130,6 +130,25 @@ public final class WindowManager {
         }
     }
 
+    // 直接调窗口服务恢复分辨率和 density：比 wm 命令(要起进程)快得多，reboot 时能抢在系统服务被停掉之前
+    // size 是 reset 或 WxH，density 是 reset 或数字；用户 -2 即 USER_CURRENT，和 wm density 一样
+    public static boolean setDisplay(String size, String density) {
+        try {
+            if (size.equals("reset")) CLASS.getMethod("clearForcedDisplaySize", int.class).invoke(manager, Display.DEFAULT_DISPLAY);
+            else {
+                String[] wh = size.split("x");
+                CLASS.getMethod("setForcedDisplaySize", int.class, int.class, int.class).invoke(manager, Display.DEFAULT_DISPLAY, Integer.parseInt(wh[0]), Integer.parseInt(wh[1]));
+            }
+            if (density.equals("reset"))
+                CLASS.getMethod("clearForcedDisplayDensityForUser", int.class, int.class).invoke(manager, Display.DEFAULT_DISPLAY, -2);
+            else
+                CLASS.getMethod("setForcedDisplayDensityForUser", int.class, int.class, int.class).invoke(manager, Display.DEFAULT_DISPLAY, Integer.parseInt(density), -2);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static void registerRotationWatcher(IRotationWatcher rotationWatcher, int displayId) {
         try {
             try {

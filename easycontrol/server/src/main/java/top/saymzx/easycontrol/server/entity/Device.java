@@ -66,7 +66,12 @@ public final class Device {
         }
         ResolutionGuard.waitPrevious();
         ResolutionGuard.start();
-        getRealSize();
+        // 读不到分辨率或 wm 命令失败也要能连上，只是不改分辨率
+        try {
+            getRealSize();
+        } catch (Exception e) {
+            Log.e("Easycontrol_Server", "Resolution: " + e);
+        }
         updateSize();
         // 旋转监听
         setRotationListener();
@@ -93,34 +98,58 @@ public final class Device {
         return Integer.parseInt(Objects.requireNonNull(m.group(1)));
     }
 
-    // 当前生效的 density(用户调过"显示大小"就是 Override)，和恢复时要写回的值
+    // 当前生效的 density，和恢复时要写回的分辨率、density(用户或系统设置的 Override，没有就是 reset)
     private static int baseDensity = 0;
+    private static String originalSize = "reset";
     private static String originalDensity = "reset";
 
     private static void getRealSize() throws IOException, InterruptedException {
-        // 上次会话没能恢复的 density(如平板断电)先按备份恢复
-        ResolutionGuard.restoreDensity();
-        String densityOutput = Device.execReadOutput("wm density");
-        Matcher physicalDensity = Pattern.compile("Physical density: (\\d+)").matcher(densityOutput);
-        Matcher overrideDensity = Pattern.compile("Override density: (\\d+)").matcher(densityOutput);
-        if (overrideDensity.find()) {
-            originalDensity = overrideDensity.group(1);
-            baseDensity = Integer.parseInt(originalDensity);
-        } else if (physicalDensity.find()) baseDensity = Integer.parseInt(physicalDensity.group(1));
+        // 有备份说明上次没能恢复(如平板断电、adb 被重启)，先按备份恢复
+        try {
+            ResolutionGuard.restore(false);
+        } catch (Exception e) {
+            Log.e("Easycontrol_Server", "Resolution: restore backup failed " + e);
+        }
         String output = Device.execReadOutput("wm size");
-        // 有 Override 说明上次没能恢复(如平板断电)，先恢复；一律以物理分辨率为准
-        if (output.contains("Override")) {
+        Pair<Integer, Integer> physical = parseSize(output, "Physical");
+        Pair<Integer, Integer> override = parseSize(output, "Override");
+        // 没有备份却有 Override：长宽比和物理分辨率不同的，是不写备份的旧版本留下的，清掉；
+        // 比例相同的是用户或系统的屏幕分辨率设置，保留，以它为准
+        if (override != null && physical != null && !isSameRatio(override, physical)) {
             Log.e("Easycontrol_Server", "Resolution: reset stale override");
-            Device.execReadOutput("wm size reset");
-            Thread.sleep(200);
+            try {
+                Device.execReadOutput("wm size reset");
+                Thread.sleep(200);
+                override = null;
+            } catch (Exception ignored) {
+            }
         }
-        Matcher matcher = Pattern.compile("Physical size: (\\d+)x(\\d+)").matcher(output);
-        if (matcher.find()) {
-            String width = matcher.group(1);
-            String height = matcher.group(2);
-            if (width == null || height == null) return;
-            realSize = new Pair<>(Integer.parseInt(width), Integer.parseInt(height));
+        realSize = override != null ? override : physical;
+        if (override != null) originalSize = override.first + "x" + override.second;
+        try {
+            String densityOutput = Device.execReadOutput("wm density");
+            Matcher physicalDensity = Pattern.compile("Physical density: (\\d+)").matcher(densityOutput);
+            Matcher overrideDensity = Pattern.compile("Override density: (\\d+)").matcher(densityOutput);
+            if (overrideDensity.find()) {
+                originalDensity = overrideDensity.group(1);
+                baseDensity = Integer.parseInt(originalDensity);
+            } else if (physicalDensity.find()) baseDensity = Integer.parseInt(physicalDensity.group(1));
+        } catch (Exception e) {
+            // 读不到就只改分辨率，不改 density
+            Log.e("Easycontrol_Server", "Resolution: density " + e);
         }
+    }
+
+    private static Pair<Integer, Integer> parseSize(String output, String kind) {
+        Matcher matcher = Pattern.compile(kind + " size: (\\d+)x(\\d+)").matcher(output);
+        if (!matcher.find()) return null;
+        return new Pair<>(Integer.parseInt(Objects.requireNonNull(matcher.group(1))), Integer.parseInt(Objects.requireNonNull(matcher.group(2))));
+    }
+
+    private static boolean isSameRatio(Pair<Integer, Integer> a, Pair<Integer, Integer> b) {
+        float ratioA = (float) a.first / a.second;
+        float ratioB = (float) b.first / b.second;
+        return Math.abs(ratioA - ratioB) < ratioB * 0.02f;
     }
 
     private static void updateSize() {
@@ -168,35 +197,45 @@ public final class Device {
         }
     }
 
+    // 修改和恢复互斥：恢复开始后不再接受修改，否则修改会落在恢复之后
+    private static final Object displayLock = new Object();
+    private static boolean isFallback = false;
+
     // 修改分辨率
     public static void changeResolution(int width, int height) {
-        try {
-            float originalRatio = (float) realSize.first / realSize.second;
-            // 安全阈值(长宽比最多三倍)
-            if (originalRatio > 3 || originalRatio < 0.34) return;
+        synchronized (displayLock) {
+            try {
+                if (isFallback) return;
+                float originalRatio = (float) realSize.first / realSize.second;
+                // 安全阈值(长宽比最多三倍)
+                if (originalRatio > 3 || originalRatio < 0.34) return;
 
-            needReset = true;
+                needReset = true;
 
-            // 缩放至16倍数
-            width = width + 8 & ~15;
-            height = height + 8 & ~15;
-            // 避免分辨率相同，会触发安全机制导致系统崩溃
-            if (width == height) width -= 16;
+                // 缩放至16倍数
+                width = width + 8 & ~15;
+                height = height + 8 & ~15;
+                // 避免分辨率相同，会触发安全机制导致系统崩溃
+                if (width == height) width -= 16;
 
-            // 修改分辨率
-            if (virtualDisplay != null) virtualDisplay.resize(width, height, displayInfo.density);
-            else if (baseDensity > 0) {
-                // density 按短边同比例缩放，最小宽度(dp)和原生一样，桌面等布局不会放不下
-                int density = baseDensity * Math.min(width, height) / Math.min(realSize.first, realSize.second);
-                ResolutionGuard.backupDensity(originalDensity);
-                Device.execReadOutput("wm size " + width + "x" + height + " && wm density " + density);
-            } else Device.execReadOutput("wm size " + width + "x" + height);
+                // 修改分辨率
+                if (virtualDisplay != null) virtualDisplay.resize(width, height, displayInfo.density);
+                else {
+                    // 先写备份再改，写不进去就不改，否则恢复时不知道原值
+                    if (!ResolutionGuard.backup(originalSize, originalDensity)) return;
+                    String cmd = "wm size " + width + "x" + height;
+                    // density 按短边同比例缩放，最小宽度(dp)和原来一样，桌面等布局不会放不下
+                    if (baseDensity > 0)
+                        cmd += " && wm density " + baseDensity * Math.min(width, height) / Math.min(realSize.first, realSize.second);
+                    Device.execReadOutput(cmd);
+                }
 
-            // 更新，需延迟一段时间
-            Thread.sleep(200);
-            updateSize();
-            VideoEncode.isHasChangeConfig = true;
-        } catch (Exception ignored) {
+                // 更新，需延迟一段时间
+                Thread.sleep(200);
+                updateSize();
+                VideoEncode.isHasChangeConfig = true;
+            } catch (Exception ignored) {
+            }
         }
     }
 
@@ -207,19 +246,18 @@ public final class Device {
         else changeResolution(shortSide, longSide);
     }
 
-    // 恢复分辨率
-    public static void fallbackResolution() throws IOException, InterruptedException {
-        if (Device.needReset) {
+    // 恢复分辨率：等正在进行的修改做完再恢复
+    public static void fallbackResolution(boolean isShutdown) throws IOException, InterruptedException {
+        synchronized (displayLock) {
+            isFallback = true;
             if (virtualDisplay != null) {
+                if (!needReset) return;
                 int appStackId = getAppStackId();
                 // 应用仍在栈中则先移回默认显示再释放虚拟显示，避免被镜像的应用被销毁
                 if (appStackId != -1)
                     Device.execReadOutput("am display move-stack " + appStackId + " " + Display.DEFAULT_DISPLAY);
                 virtualDisplay.release();
-            } else {
-                Device.execReadOutput("wm size reset");
-                ResolutionGuard.restoreDensity();
-            }
+            } else ResolutionGuard.restore(isShutdown);
         }
     }
 
