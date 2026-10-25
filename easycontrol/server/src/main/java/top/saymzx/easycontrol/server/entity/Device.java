@@ -4,7 +4,6 @@
 package top.saymzx.easycontrol.server.entity;
 
 import android.content.IOnPrimaryClipChangedListener;
-import android.hardware.display.VirtualDisplay;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.SystemClock;
@@ -41,32 +40,11 @@ import top.saymzx.easycontrol.server.wrappers.WindowManager;
 import top.saymzx.easycontrol.server.wrappers.AudioManager;
 
 public final class Device {
-    private static int displayId = Display.DEFAULT_DISPLAY;
-    private static VirtualDisplay virtualDisplay;
     public static Pair<Integer, Integer> realSize;
     public static DisplayInfo displayInfo;
     public static Pair<Integer, Integer> videoSize;
-    private static boolean needReset = false;
 
     public static void init() throws Exception {
-        // 若启动单个应用则需创建虚拟Dispaly
-        if (!Objects.equals(Options.startApp, "")) {
-            try {
-                virtualDisplay = DisplayManager.createVirtualDisplay();
-                displayId = virtualDisplay.getDisplay().getDisplayId();
-                startAndMoveAppToVirtualDisplay();
-                needReset = true;
-            } catch (Exception e) {
-                // 无法移入虚拟显示（如桌面/系统应用，或系统不支持虚拟显示），回退为普通全屏镜像
-                if (virtualDisplay != null) {
-                    virtualDisplay.release();
-                    virtualDisplay = null;
-                }
-                displayId = Display.DEFAULT_DISPLAY;
-                Options.startApp = "";
-                // needReset 保持 false：release() 时 fallbackResolution() 被跳过，不再触碰失败的虚拟显示
-            }
-        }
         ResolutionGuard.waitPrevious();
         ResolutionGuard.start();
         // 读不到分辨率或 wm 命令失败也要能连上，只是不改分辨率
@@ -81,24 +59,6 @@ public final class Device {
         // 剪切板监听
         if (Options.listenerClip) setClipBoardListener();
         // 防息屏改为非侵入式userActivity，由executeVideoOut定期调用，无需在此初始化
-    }
-
-    // 打开并移动应用
-    private static void startAndMoveAppToVirtualDisplay() throws IOException, InterruptedException {
-        int appStackId = getAppStackId();
-        if (appStackId == -1) {
-            Device.execReadOutput("monkey -p " + Options.startApp + " -c android.intent.category.LAUNCHER 1");
-            appStackId = getAppStackId();
-        }
-        if (appStackId == -1) throw new IOException("error app");
-        Device.execReadOutput("am display move-stack " + appStackId + " " + displayId);
-    }
-
-    private static int getAppStackId() throws IOException, InterruptedException {
-        String amStackList = Device.execReadOutput("am stack list");
-        Matcher m = Pattern.compile("taskId=([0-9]+): " + Options.startApp).matcher(amStackList);
-        if (!m.find()) return -1;
-        return Integer.parseInt(Objects.requireNonNull(m.group(1)));
     }
 
     // 当前生效的 density，和恢复时要写回的分辨率、density(用户或系统设置的 Override，没有就是 reset)
@@ -156,7 +116,7 @@ public final class Device {
     }
 
     private static void updateSize() {
-        displayInfo = DisplayManager.getDisplayInfo(displayId);
+        displayInfo = DisplayManager.getDisplayInfo(Display.DEFAULT_DISPLAY);
         boolean isPortrait = displayInfo.width < displayInfo.height;
         int major = isPortrait ? displayInfo.height : displayInfo.width;
         int minor = isPortrait ? displayInfo.width : displayInfo.height;
@@ -213,25 +173,19 @@ public final class Device {
                 // 安全阈值(长宽比最多三倍)
                 if (originalRatio > 3 || originalRatio < 0.34) return;
 
-                needReset = true;
-
                 // 缩放至16倍数
                 width = width + 8 & ~15;
                 height = height + 8 & ~15;
                 // 避免分辨率相同，会触发安全机制导致系统崩溃
                 if (width == height) width -= 16;
 
-                // 修改分辨率
-                if (virtualDisplay != null) virtualDisplay.resize(width, height, displayInfo.density);
-                else {
-                    // 先写备份再改，写不进去就不改，否则恢复时不知道原值
-                    if (!ResolutionGuard.backup(originalSize, originalDensity)) return;
-                    String cmd = "wm size " + width + "x" + height;
-                    // density 按短边同比例缩放，最小宽度(dp)和原来一样，桌面等布局不会放不下
-                    if (baseDensity > 0)
-                        cmd += " && wm density " + baseDensity * Math.min(width, height) / Math.min(realSize.first, realSize.second);
-                    Device.execReadOutput(cmd);
-                }
+                // 先写备份再改，写不进去就不改，否则恢复时不知道原值
+                if (!ResolutionGuard.backup(originalSize, originalDensity)) return;
+                String cmd = "wm size " + width + "x" + height;
+                // density 按短边同比例缩放，最小宽度(dp)和原来一样，桌面等布局不会放不下
+                if (baseDensity > 0)
+                    cmd += " && wm density " + baseDensity * Math.min(width, height) / Math.min(realSize.first, realSize.second);
+                Device.execReadOutput(cmd);
 
                 // 更新，需延迟一段时间
                 Thread.sleep(200);
@@ -253,14 +207,7 @@ public final class Device {
     public static void fallbackResolution(boolean isShutdown) throws IOException, InterruptedException {
         synchronized (displayLock) {
             isFallback = true;
-            if (virtualDisplay != null) {
-                if (!needReset) return;
-                int appStackId = getAppStackId();
-                // 应用仍在栈中则先移回默认显示再释放虚拟显示，避免被镜像的应用被销毁
-                if (appStackId != -1)
-                    Device.execReadOutput("am display move-stack " + appStackId + " " + Display.DEFAULT_DISPLAY);
-                virtualDisplay.release();
-            } else ResolutionGuard.restore(isShutdown);
+            ResolutionGuard.restore(isShutdown);
         }
     }
 
@@ -291,7 +238,7 @@ public final class Device {
                 updateSize();
                 VideoEncode.isHasChangeConfig = true;
             }
-        }, displayId);
+        }, Display.DEFAULT_DISPLAY);
     }
 
     private static final PointersState pointersState = new PointersState();
@@ -372,8 +319,6 @@ public final class Device {
 
     private static void injectEvent(InputEvent inputEvent) {
         try {
-            if (displayId != Display.DEFAULT_DISPLAY)
-                InputManager.setDisplayId(inputEvent, displayId);
             InputManager.injectInputEvent(inputEvent, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
         } catch (Exception ignored) {
         }
@@ -533,9 +478,9 @@ public final class Device {
     }
 
     public static void rotateDevice() {
-        boolean accelerometerRotation = !WindowManager.isRotationFrozen(displayId);
-        WindowManager.freezeRotation(displayId, (displayInfo.rotation == 0 || displayInfo.rotation == 3) ? 1 : 0);
-        if (accelerometerRotation) WindowManager.thawRotation(displayId);
+        boolean accelerometerRotation = !WindowManager.isRotationFrozen(Display.DEFAULT_DISPLAY);
+        WindowManager.freezeRotation(Display.DEFAULT_DISPLAY, (displayInfo.rotation == 0 || displayInfo.rotation == 3) ? 1 : 0);
+        if (accelerometerRotation) WindowManager.thawRotation(Display.DEFAULT_DISPLAY);
     }
 
     // 修改媒体音量(STREAM_MUSIC，滑块0-100)：优先用 AudioService 绝对音量(系统设置音量同一路径，全ROM通用)；
@@ -589,7 +534,7 @@ public final class Device {
     // 非侵入式防息屏：发送用户活动信号，不修改任何系统设置
     // 由Server.executeVideoOut定期调用
     public static void keepActive() {
-        if (Options.keepAwake) PowerManager.userActivity(displayId);
+        if (Options.keepAwake) PowerManager.userActivity(Display.DEFAULT_DISPLAY);
     }
 
 }

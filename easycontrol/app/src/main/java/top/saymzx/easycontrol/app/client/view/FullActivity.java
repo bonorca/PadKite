@@ -27,7 +27,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.Objects;
 
 import top.saymzx.easycontrol.app.client.Client;
 import top.saymzx.easycontrol.app.client.tools.ClientController;
@@ -68,10 +67,6 @@ public class FullActivity extends AppCompatActivity implements SensorEventListen
             lastOrientation = device.fullOrientation;
             setRequestedOrientation(device.fullOrientation);
         } else if (!autoRotate) lockOrientation();
-        if (!Objects.equals(device.startApp, "")) {
-            activityFullBinding.buttonHome.setVisibility(View.GONE);
-            activityFullBinding.buttonSwitch.setVisibility(View.GONE);
-        }
         // 按键监听
         setButtonListener();
         setFloatButton();

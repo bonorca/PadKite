@@ -36,7 +36,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
@@ -106,9 +105,6 @@ public class ClientController implements TextureView.SurfaceTextureListener {
                     break;
                 case "changeToMini":
                     changeToMini(byteBuffer);
-                    break;
-                case "changeToApp":
-                    changeToApp();
                     break;
                 case "buttonPower":
                     clientStream.writeToMain(ControlPacket.createPowerEvent(-1));
@@ -224,7 +220,6 @@ public class ClientController implements TextureView.SurfaceTextureListener {
     private static final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
 
     public void saveDevice() {
-        if (device.isTempDevice()) return;
         dbExecutor.execute(() -> {
             try {
                 AppData.dbHelper.updatePrefs(device);
@@ -304,54 +299,6 @@ public class ClientController implements TextureView.SurfaceTextureListener {
         // 兼容安卓6以下部分国产ROM检测不准
         try {
             return !PublicTools.checkOverlayPermission(AppData.applicationContext);
-        } catch (Exception ignored) {
-            return false;
-        }
-    }
-
-    private void changeToApp() {
-        if (noFloatPermission()) {
-            PublicTools.logToast("controller", AppData.applicationContext.getString(R.string.toast_float_per), true);
-            return;
-        }
-        // 在独立线程执行 shell 命令，避免阻塞 mainThread 导致 keepAlive 超时
-        new Thread(() -> {
-            try {
-                String output = clientStream.runShell("dumpsys window | grep mCurrentFocus=Window");
-                Matcher matcher = Pattern.compile(" ([a-zA-Z0-9.]+)/").matcher(output);
-                if (matcher.find()) {
-                    String appPackage = matcher.group(1);
-                    // 当前前台为桌面(Launcher)时无法将其移入虚拟显示进行单应用投屏，直接提示
-                    if (isHomeApp(appPackage)) {
-                        PublicTools.logToast("controller", AppData.applicationContext.getString(R.string.toast_home_single_app), true);
-                        return;
-                    }
-                    Device tempDevice = device.clone(String.valueOf(UUID.randomUUID()));
-                    tempDevice.name = "----";
-                    tempDevice.startApp = appPackage;
-                    tempDevice.smallX += 200;
-                    tempDevice.smallY += 200;
-                    tempDevice.smallLength -= 200;
-                    tempDevice.miniY += 200;
-                    // 切换成功后（原服务端已被新服务端 pkill）再关闭原会话，避免误报「连接断开」；
-                    // 连接失败则原会话保留，不会丢失
-                    tempDevice.onConnectSuccess = () -> Client.sendAction(device.uuid, "close", null, 0);
-                    // Client 构造函数需要创建 Dialog，必须在 UI 线程执行
-                    AppData.uiHandler.post(() -> Client.startDevice(tempDevice));
-                }
-            } catch (Exception ignored) {
-            }
-        }).start();
-    }
-
-    // 判断前台应用是否为桌面(Launcher)，检测失败时返回 false 交由服务端容错兜底
-    private boolean isHomeApp(String appPackage) {
-        try {
-            String homeOutput = clientStream.runShell("cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME");
-            Matcher homeMatcher = Pattern.compile("([a-zA-Z0-9.]+)/").matcher(homeOutput);
-            String homePackage = "";
-            while (homeMatcher.find()) homePackage = homeMatcher.group(1);
-            return !homePackage.isEmpty() && Objects.equals(appPackage, homePackage);
         } catch (Exception ignored) {
             return false;
         }

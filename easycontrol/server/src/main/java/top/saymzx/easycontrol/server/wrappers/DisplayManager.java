@@ -3,11 +3,7 @@
  */
 package top.saymzx.easycontrol.server.wrappers;
 
-import android.content.Context;
 import android.hardware.display.VirtualDisplay;
-import android.media.MediaCodec;
-import android.os.Build;
-import android.view.Display;
 import android.view.Surface;
 
 import java.util.Objects;
@@ -16,16 +12,9 @@ import java.util.regex.Pattern;
 
 import top.saymzx.easycontrol.server.entity.Device;
 import top.saymzx.easycontrol.server.entity.DisplayInfo;
-import top.saymzx.easycontrol.server.helper.FakeContext;
 
 public final class DisplayManager {
     private static Object manager;
-
-    private static final int VIRTUAL_DISPLAY_FLAG_DESTROY_CONTENT_ON_REMOVAL = 1 << 8;
-    private static final int VIRTUAL_DISPLAY_FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS = 1 << 9;
-    private static final int VIRTUAL_DISPLAY_FLAG_TRUSTED = 1 << 10;
-    private static final int VIRTUAL_DISPLAY_FLAG_OWN_DISPLAY_GROUP = 1 << 11;
-    private static final int VIRTUAL_DISPLAY_FLAG_ALWAYS_UNLOCKED = 1 << 12;
 
     public static void init(Object m) {
         manager = m;
@@ -72,21 +61,5 @@ public final class DisplayManager {
         } catch (Exception e) {
             throw new AssertionError(e);
         }
-    }
-
-    // 此处大量借鉴了 群友 @○_○ 所编写的易控车机版本相应功能
-    public static VirtualDisplay createVirtualDisplay() throws Exception {
-        DisplayInfo realDisplayinfo = getDisplayInfo(Display.DEFAULT_DISPLAY);
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            throw new Exception("Virtual display is not supported before Android 11");
-        }
-
-        int flags = android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC | android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY | VIRTUAL_DISPLAY_FLAG_DESTROY_CONTENT_ON_REMOVAL | android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            flags |= VIRTUAL_DISPLAY_FLAG_TRUSTED | VIRTUAL_DISPLAY_FLAG_OWN_DISPLAY_GROUP | VIRTUAL_DISPLAY_FLAG_ALWAYS_UNLOCKED;
-
-        Surface surface = MediaCodec.createPersistentInputSurface();
-        android.hardware.display.DisplayManager displayManager = android.hardware.display.DisplayManager.class.getDeclaredConstructor(Context.class).newInstance(FakeContext.get());
-        return displayManager.createVirtualDisplay("easycontrol", realDisplayinfo.width, realDisplayinfo.height, realDisplayinfo.density, surface, flags);
     }
 }

@@ -2,7 +2,6 @@ package top.saymzx.easycontrol.app.entity;
 
 import android.util.DisplayMetrics;
 
-import java.util.Objects;
 
 import top.saymzx.easycontrol.app.helper.PublicTools;
 
@@ -59,7 +58,6 @@ public class Device {
     public final int type;
     public String name;
     public String address = "";
-    public String startApp = "";
     public int adbPort = 5555;
     public int serverPort = 25166;
     public boolean listenClip = true;
@@ -98,9 +96,6 @@ public class Device {
     public int smallLengthLan = 800;
     public int miniY = 200;
 
-    // 连接成功后的回调（用于单应用投屏切换：temp 连接成功后再关闭原会话，避免失败时丢失会话）
-    public Runnable onConnectSuccess = null;
-
     public Device(String uuid, int type) {
         this.uuid = uuid;
         this.type = type;
@@ -132,15 +127,10 @@ public class Device {
         return type == TYPE_LINK;
     }
 
-    public boolean isTempDevice() {
-        return Objects.equals(name, "----");
-    }
-
     public Device clone(String uuid) {
         Device newDevice = new Device(uuid, type);
         newDevice.name = name;
         newDevice.address = address;
-        newDevice.startApp = startApp;
         newDevice.adbPort = adbPort;
         newDevice.serverPort = serverPort;
         newDevice.listenClip = listenClip;

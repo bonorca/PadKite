@@ -17,7 +17,6 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 
 import java.util.ArrayList;
-import java.util.Objects;
 
 import top.saymzx.easycontrol.app.R;
 import top.saymzx.easycontrol.app.client.Client;
@@ -111,7 +110,7 @@ public class ControlPanel {
             volumeParams.topMargin = 0;
             volumeParams.setMarginStart(PublicTools.dp2px(8f));
         }
-        panel.title.setText(device.isTempDevice() ? device.startApp : device.name);
+        panel.title.setText(device.name);
         panel.scrim.setOnClickListener(v -> hide(true));
         panel.buttonClose.setOnClickListener(v -> hide(true));
         setNavButtons();
@@ -178,10 +177,6 @@ public class ControlPanel {
         panel.buttonBack.setOnClickListener(v -> runAndHide(() -> clientController.handleAction("buttonBack", null, 0)));
         panel.buttonHome.setOnClickListener(v -> runAndHide(() -> clientController.handleAction("buttonHome", null, 0)));
         panel.buttonSwitch.setOnClickListener(v -> runAndHide(() -> clientController.handleAction("buttonSwitch", null, 0)));
-        if (!Objects.equals(device.startApp, "")) {
-            panel.buttonHome.setVisibility(View.GONE);
-            panel.buttonSwitch.setVisibility(View.GONE);
-        }
     }
 
     // 媒体音量：滑块 0-100，服务端按被控端自身档位换算；左边图标一键静音/恢复
@@ -252,8 +247,6 @@ public class ControlPanel {
         tiles.add(createAction(R.drawable.screenshot, R.string.panel_screenshot, () -> clientController.handleAction("screenshot", null, 0)));
         tiles.add(createAction(R.drawable.power, R.string.panel_power, () -> clientController.handleAction("buttonPower", null, 0)));
         tiles.add(createAction(R.drawable.status, R.string.panel_status, this::showStatusDialog));
-        if (Objects.equals(device.startApp, ""))
-            tiles.add(createAction(R.drawable.share, R.string.panel_single_app, () -> clientController.handleAction("changeToApp", null, 0)));
         if (host.isFull())
             tiles.add(createAction(R.drawable.window_restore, R.string.panel_small, () -> clientController.handleAction("changeToSmall", null, 0)));
         else

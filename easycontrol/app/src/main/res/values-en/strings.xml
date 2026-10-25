@@ -44,8 +44,6 @@
     <string name="device_address">Address</string>
     <string name="device_scan_device_list">Find the following address (click to populate)</string>
     <string name="device_address_hint">IPv4/v6 addresses or domain</string>
-    <string name="device_start_app">Just One App</string>
-    <string name="device_start_app_hint">If empty, will cast a screen.</string>
     <string name="device_adb_port">ADB Port</string>
     <string name="device_server_port">Server Port</string>
 
@@ -124,7 +122,6 @@
     <string name="panel_screenshot">Screenshot</string>
     <string name="panel_power">Power</string>
     <string name="panel_status">Status</string>
-    <string name="panel_single_app">Single app</string>
     <string name="panel_small">Window</string>
     <string name="panel_full">Full screen</string>
     <string name="panel_mini">Minimize</string>
@@ -147,7 +144,6 @@
     <string name="toast_connect_rejected">Connection rejected — enable network debugging on the target device and authorize this device</string>
     <string name="toast_stream_closed">Disconnected</string>
     <string name="toast_float_per">Need floating window permission</string>
-    <string name="toast_home_single_app">Cannot single-app cast the home screen</string>
     <string name="toast_screenshot_saved">Screenshot saved to gallery</string>
     <string name="toast_screenshot_failed">Failed to save screenshot</string>
     <string name="toast_record_start">Recording started</string>

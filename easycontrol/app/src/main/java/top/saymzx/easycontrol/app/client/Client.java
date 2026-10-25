@@ -51,8 +51,6 @@ public class Client {
                 AppData.uiHandler.postDelayed(ClientService::update, 2000);
                 // 控制器、播放器
                 clientController = new ClientController(device, clientStream, () -> clientPlayer = new ClientPlayer(device.uuid, clientStream));
-                // 临时设备
-                boolean isTempDevice = device.isTempDevice();
                 // 启动界面
                 clientController.handleAction(device.changeToFullOnConnect ? "changeToFull" : "changeToSmall", null, 0);
                 // 运行启动时操作
@@ -63,15 +61,8 @@ public class Client {
                     } else
                         clientController.handleAction("writeByteBuffer", ControlPacket.createChangeResolutionEvent(device.customResolutionWidth, device.customResolutionHeight), 0);
                 }
-                if (!isTempDevice && device.wakeOnConnect)
-                    clientController.handleAction("buttonWake", null, 0);
-                if (!isTempDevice && device.lightOffOnConnect) clientController.screenOffOnConnect();
-                // 连接成功回调（单应用投屏切换：此时才关闭原会话，连接失败则原会话保留）
-                if (device.onConnectSuccess != null) {
-                    Runnable onConnectSuccess = device.onConnectSuccess;
-                    device.onConnectSuccess = null;
-                    onConnectSuccess.run();
-                }
+                if (device.wakeOnConnect) clientController.handleAction("buttonWake", null, 0);
+                if (device.lightOffOnConnect) clientController.screenOffOnConnect();
             }
             ViewTools.dismiss(loading.second);
         });
@@ -80,10 +71,8 @@ public class Client {
     public static void startDevice(Device device) {
         if (device == null) return;
         // 列表里的设备对象可能是会话之前读的旧副本：以数据库为准，免得用旧的偏好开始、再把旧值写回去
-        if (!device.isTempDevice()) {
-            Device latest = AppData.dbHelper.getByUUID(device.uuid);
-            if (latest != null) device = latest;
-        }
+        Device latest = AppData.dbHelper.getByUUID(device.uuid);
+        if (latest != null) device = latest;
         new Client(device);
     }
 
@@ -138,14 +127,10 @@ public class Client {
     private void close(ByteBuffer byteBuffer) {
         if (isClosed) return;
         isClosed = true;
-        // 临时设备
-        boolean isTempDevice = device.isTempDevice();
         // 更新数据库
-        if (!isTempDevice) {
-            try {
-                AppData.dbHelper.updatePrefs(device);
-            } catch (Exception ignored) {
-            }
+        try {
+            AppData.dbHelper.updatePrefs(device);
+        } catch (Exception ignored) {
         }
         allClient.remove(device.uuid);
         AppData.uiHandler.post(ClientService::update);

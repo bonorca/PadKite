@@ -16,7 +16,6 @@ import android.view.ViewOutlineProvider;
 import android.view.WindowManager;
 
 import java.nio.ByteBuffer;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -73,11 +72,6 @@ public class SmallView extends ViewOutlineProvider implements ControlPanel.Host 
         smallViewParams.x = device.smallX;
         smallViewParams.y = device.smallY;
         updateMaxSize();
-        if (!Objects.equals(device.startApp, "")) {
-            smallView.buttonHome.setVisibility(View.GONE);
-            smallView.buttonSwitch.setVisibility(View.GONE);
-            smallView.textureViewLayout.setPadding(0, PublicTools.dp2px(25f), 0, 0);
-        }
         // 自定义分辨率(2:1)
         if (!device.customResolutionOnConnect && device.changeResolutionOnRunning)
             clientController.handleAction("writeByteBuffer", ControlPacket.createChangeResolutionEvent(0.5f), 0);

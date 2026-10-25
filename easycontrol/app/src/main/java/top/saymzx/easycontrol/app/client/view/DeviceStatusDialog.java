@@ -25,8 +25,7 @@ public class DeviceStatusDialog {
     public static void show(Context context, Device device, ClientController.DeviceStatus s, boolean isOverlay, Runnable onRefresh) {
         DialogDeviceStatusBinding b = DialogDeviceStatusBinding.inflate(LayoutInflater.from(context));
         // 设备名/地址
-        String name = device.isTempDevice() ? s.model : device.name;
-        b.statusName.setText(name == null || name.isEmpty() || "----".equals(name) ? s.model : name);
+        b.statusName.setText(device.name == null || device.name.isEmpty() ? s.model : device.name);
         String addr;
         if (device.isLinkDevice()) addr = context.getString(R.string.dialog_status_conn_usb);
         else if (device.address != null && !device.address.isEmpty()) addr = device.address + ":" + device.adbPort;

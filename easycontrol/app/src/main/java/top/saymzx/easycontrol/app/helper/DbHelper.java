@@ -31,7 +31,6 @@ public class DbHelper extends SQLiteOpenHelper {
         stringBuilder.append("type integer,");
         stringBuilder.append("name text,");
         stringBuilder.append("address text,");
-        stringBuilder.append("startApp text,");
         stringBuilder.append("adbPort integer,");
         stringBuilder.append("serverPort integer,");
         stringBuilder.append("listenClip integer,");
@@ -169,7 +168,6 @@ public class DbHelper extends SQLiteOpenHelper {
         values.put("type", device.type);
         values.put("name", device.name);
         values.put("address", device.address);
-        values.put("startApp", device.startApp);
         values.put("adbPort", device.adbPort);
         values.put("serverPort", device.serverPort);
         values.put("listenClip", device.listenClip ? 1 : 0);
@@ -220,10 +218,6 @@ public class DbHelper extends SQLiteOpenHelper {
                 }
                 case "address": {
                     device.address = cursor.getString(i);
-                    break;
-                }
-                case "startApp": {
-                    device.startApp = cursor.getString(i);
                     break;
                 }
                 case "adbPort": {

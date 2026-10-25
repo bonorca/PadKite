@@ -21,8 +21,6 @@ public class ConnectHelper {
 
     public static void showReconnect(Device device, String errorMsg) {
         if (device == null) return;
-        // 临时设备不重连
-        if (device.isTempDevice()) return;
 
         uiHandler.post(() -> {
             // 避免重复弹窗

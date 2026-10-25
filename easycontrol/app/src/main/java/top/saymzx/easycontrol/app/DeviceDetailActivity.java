@@ -73,7 +73,6 @@ public class DeviceDetailActivity extends AppCompatActivity {
         // 预填写参数
         activityDeviceDetailBinding.name.setText(device.name);
         activityDeviceDetailBinding.address.setText(device.address);
-        activityDeviceDetailBinding.startApp.setText(device.startApp);
         activityDeviceDetailBinding.adbPort.setText(String.valueOf(device.adbPort));
         activityDeviceDetailBinding.serverPort.setText(String.valueOf(device.serverPort));
         activityDeviceDetailBinding.customResolutionWidth.setText(String.valueOf(device.customResolutionWidth));
@@ -166,13 +165,12 @@ public class DeviceDetailActivity extends AppCompatActivity {
         activityDeviceDetailBinding.ok.setOnClickListener(v -> {
             String name = String.valueOf(activityDeviceDetailBinding.name.getText());
             String address = String.valueOf(activityDeviceDetailBinding.address.getText());
-            if (name.equals("----") || name.equals("") || address.equals("")) {
+            if (name.equals("") || address.equals("")) {
                 Toast.makeText(this, getString(R.string.toast_config), Toast.LENGTH_SHORT).show();
                 return;
             }
             device.name = name;
             device.address = device.isLinkDevice() ? device.uuid : address;
-            device.startApp = String.valueOf(activityDeviceDetailBinding.startApp.getText());
             // 端口解析保护
             try {
                 device.adbPort = Integer.parseInt(String.valueOf(activityDeviceDetailBinding.adbPort.getText()).trim());

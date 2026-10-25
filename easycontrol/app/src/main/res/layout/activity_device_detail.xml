@@ -141,31 +141,6 @@
                     android:textColorHint="@color/onCardBackgroundSecond"
                     android:textSize="@dimen/smallFont" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/spaceLg"
-                    android:text="@string/device_start_app"
-                    android:textColor="@color/onCardBackground"
-                    android:textSize="@dimen/middleFont"
-                    android:textStyle="bold" />
-
-                <EditText
-                    android:id="@+id/start_app"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/spaceSm"
-                    android:background="@drawable/background_cron_stroke"
-                    android:hint="@string/device_start_app_hint"
-                    android:inputType="text"
-                    android:paddingStart="@dimen/spaceMd"
-                    android:paddingTop="@dimen/spaceSm"
-                    android:paddingEnd="@dimen/spaceMd"
-                    android:paddingBottom="@dimen/spaceSm"
-                    android:textColor="@color/onCardBackground"
-                    android:textColorHint="@color/onCardBackgroundSecond"
-                    android:textSize="@dimen/smallFont" />
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
