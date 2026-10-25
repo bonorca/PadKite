@@ -1,6 +1,18 @@
 # EasyControl
 
-Control an Android device from another Android device. Fork of [yutils/Easycontrol](https://github.com/yutils/Easycontrol) 1.6.1.
+Control one Android device from another wirelessly: screen, touch, keys, audio and clipboard. Made for using a tablet from a phone. Works on Android 16.
+
+Based on [yutils/Easycontrol](https://github.com/yutils/Easycontrol) 1.6.1. The connected interface, resolution handling and disconnect handling are rewritten.
+
+## Features
+
+- **Fills the phone screen.** On connect, the controlled device switches to the phone's resolution and orientation. Density scales with it, so layouts still fit. You can turn this off per device.
+- **Always restored.** Resolution and density return to what they were after a disconnect, a dropped connection, a killed or crashed server, or a reboot. After a power loss, they are restored on the next connect.
+- **One control panel.** Connections open full screen, with a nav bar of back, home and recents. A floating button opens the panel: volume, nav bar, auto-rotate, mouse mode, screen off, rotate, screenshot, power, status, window, minimize and disconnect. The button snaps to an edge and tucks away when idle. Window mode uses the same panel.
+- **Remembered per device:** nav bar, auto-rotate and orientation, mouse mode, screen off, window positions.
+- **Disconnect actions run on the controlled device.** Lock, restore backlight and mute also happen when the connection drops.
+- **Audio forwarding** needs Android 12 or later on the controlled device. Mute on disconnect uses the system mute switch. A mute you set yourself is kept.
+- **Bitrate** follows resolution and frame rate, up to 50 Mbps.
 
 ## Setup
 
@@ -28,24 +40,7 @@ With a USB OTG cable between the two devices, step 2 is not needed.
 3. Add the device by its IP address. The ADB port is 5555.
 4. On the first connect, accept the debugging prompt on the controlled device and tick *Always allow*.
 
-Both devices must be on the same network or joined by a VPN. Audio forwarding needs Android 12 or later on the controlled device.
-
-## Changes
-
-- **Android 16 black screen fixed.** On Android 14+ the server mirrors the screen with `DisplayManager.createVirtualDisplay(name, width, height, displayIdToMirror, surface)`, as scrcpy does, and falls back to `SurfaceControl` if that fails.
-- **Resolution tiers follow the phone screen:** native, 80%, 60%, 40%.
-- **Change resolution on connect can match the phone.** The tablet switches to the phone's screen resolution, orientation matched automatically, and switches back on disconnect.
-- **Resolution is always restored.** This covers a normal disconnect, the adb shell closing, a dead network (30 s heartbeat timeout), the server being killed or crashing (a separate guard process restores it), and a normal reboot or shutdown. The previous size and density are backed up on the tablet first, so your own display size or the system's resolution setting comes back exactly. After a power loss, a direct `reboot`, or adb being restarted mid-session, the next connect restores from that backup.
-- **Disconnect actions always run.** Lock, restore backlight and mute are done by the server when the session ends, so they also happen when the connection drops. Restore backlight now also works after the screen-off button.
-- **Mute on disconnect fixed.** It used to set the media volume to 0 while audio was still being forwarded, which hit the forwarding volume instead of the speaker. The tablet kept playing aloud and the next session was silent on the phone. It now uses the system mute switch, which covers every output, and the next connect unmutes. A mute you set yourself is kept.
-- **New controls after connecting.** Full screen is the default. A floating button opens one control panel. Drop it anywhere and it snaps to the nearest edge, then tucks half away when idle. Tap outside, press back or tap × to close it. Toggles such as nav bar, auto-rotate, mouse and screen off are labelled and highlighted when on. The nav bar holds only back, home and recents. The windowed mode uses the same panel. Everything you switch there (nav bar, auto-rotate, orientation, mouse, screen off) and the window positions are remembered per device.
-- **Backlight toggle fixed.** Turning the backlight back on left the panel in doze (dim).
-- **Density follows resolution.** When the resolution is changed, density is scaled by the same ratio, so the smallest width in dp stays as before and the launcher still fits. Your own display size setting is backed up on the tablet and restored afterwards.
-- **Foreground service while connected,** so Android does not freeze the app in the background and drop the session.
-- **Bitrate up to 50 Mbps.** It is picked automatically whenever resolution or FPS changes, and can still be set by hand.
-- **Update checker removed.** The `com.kotlinx:appUpdate` library and its plain-HTTP check are gone. *Check for updates* in Settings just opens the latest GitHub release.
-- **No public signing key.** Upstream ships its keystore and password, so you build with your own key.
-- **Fork branding removed.**
+Both devices must be on the same network or joined by a VPN.
 
 ## Build
 
@@ -70,9 +65,10 @@ The APK is written to `easycontrol/app/build/outputs/apk/release/`.
 ## Notes
 
 - Install it on the controlling device only.
-- The server jar on the controlled device is named after the versionCode and a checksum of its contents, so a changed server is pushed again on the next connect.
+- There is no built-in update check. *Check for updates* in Settings opens the GitHub releases page.
 - Port 25166 has no authentication. Do not expose it, or the ADB port, to the internet. Use a VPN instead.
-- To see which capture path is in use, run `adb logcat -s Easycontrol_Server` on the controlled device.
+- On Android 14+ the screen is captured with `DisplayManager.createVirtualDisplay(name, width, height, displayIdToMirror, surface)`, as scrcpy does, with `SurfaceControl` as the fallback. `adb logcat -s Easycontrol_Server` on the controlled device shows which path is used.
+- The server jar on the controlled device is named after the versionCode and a checksum of its contents, so a changed server is pushed again on the next connect.
 
 ## License
 
