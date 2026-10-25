@@ -34,6 +34,7 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -747,9 +748,13 @@ public class ClientController implements TextureView.SurfaceTextureListener {
     }
 
     private void parseBattery(DeviceStatus s, String section) {
-        Matcher matcher = Pattern.compile("\\b(level|scale|status|temperature|voltage|technology):\\s*(\\S+)").matcher(section);
+        // 字段名要占满一行的开头：新系统在 "level: 85" 后面还有 "Capacity level: 3"(电量等级，3 是正常)，
+        // 按单词匹配会把电量盖成 3%；同名字段只认第一个(系统自己的那段在最前)
+        Matcher matcher = Pattern.compile("(?m)^\\s*(level|scale|status|temperature|voltage|technology):\\s*(\\S+)").matcher(section);
+        HashSet<String> seen = new HashSet<>();
         while (matcher.find()) {
             String key = matcher.group(1);
+            if (!seen.add(key)) continue;
             String value = matcher.group(2).trim();
             try {
                 switch (key) {
