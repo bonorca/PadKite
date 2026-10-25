@@ -1,0 +1,1 @@
+Renamed to PadKite, with its own package name and icon. It installs as a new app next to EasyControl. Add your devices again. To skip the debugging prompt on the controlled device, copy both keys from EasyControl's Settings → Custom ADB key into PadKite's.
