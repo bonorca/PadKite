@@ -12,6 +12,6 @@ dependencyResolutionManagement {
     mavenCentral()
   }
 }
-rootProject.name = "Easycontrol"
+rootProject.name = "PadKite"
 include ':app'
 include ':server'

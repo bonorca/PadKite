@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">易控</string>
-    <string name="app_name_simple">易控</string>
-    <string name="app_name_dev">易控Beta</string>
+    <string name="app_name">PadKite</string>
+    <string name="app_name_simple">PadKite</string>
+    <string name="app_name_dev">PadKite Beta</string>
 
     <!-- 页面标题 -->
     <string name="title_device_detail">设备配置</string>

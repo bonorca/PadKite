@@ -1,0 +1,12 @@
+Use a tablet from your phone, or any Android device from another, over Wi-Fi or a VPN. The controlled device only needs ADB over the network (adb tcpip 5555) or a USB OTG cable. No app is installed on it.
+
+- Works on Android 16
+- The picture fills the phone screen. The tablet can switch to the phone's resolution while connected
+- The tablet's resolution and display size are always restored after disconnecting, even when the connection drops
+- One floating control panel: nav bar, auto-rotate, mouse, screen off, screenshot, power, device status
+- Audio forwarding (Android 12 or later on the controlled device)
+- Settings are remembered per device
+
+Based on EasyControl (易控) by mingzhixian and yutils, which builds on scrcpy.
+
+Port 25166 has no authentication. Use it on a trusted network or over a VPN.

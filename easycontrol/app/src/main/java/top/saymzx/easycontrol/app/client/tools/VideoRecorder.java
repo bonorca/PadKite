@@ -56,7 +56,7 @@ public class VideoRecorder {
         }
         File dir = AppData.applicationContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES);
         if (dir != null) dir.mkdirs();
-        file = new File(dir, "easycontrol_rec_" + System.currentTimeMillis() + ".mp4");
+        file = new File(dir, "padkite_rec_" + System.currentTimeMillis() + ".mp4");
         muxer = new MediaMuxer(file.getAbsolutePath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
         MediaFormat format = MediaFormat.createVideoFormat(mime, videoSize.first, videoSize.second);
         // 从 csd0/csd1 里解析干净的 SPS/PPS 写进 MediaFormat。
@@ -1027,7 +1027,7 @@ public class VideoRecorder {
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.Video.Media.DISPLAY_NAME, file.getName());
                 values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4");
-                values.put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/Easycontrol");
+                values.put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/PadKite");
                 Uri uri = AppData.applicationContext.getContentResolver()
                         .insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values);
                 if (uri == null) throw new IOException("MediaStore insert fail");

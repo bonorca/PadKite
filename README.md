@@ -1,4 +1,4 @@
-# EasyControl
+# PadKite
 
 Control one Android device from another wirelessly. Fork of [yutils/Easycontrol](https://github.com/yutils/Easycontrol) 1.6.1.
 
@@ -32,6 +32,7 @@ Both devices must be on the same network or joined by a VPN. Audio forwarding ne
 
 ## Changes
 
+- **Renamed to PadKite,** with its own package name `io.github.chillibeaver.padkite`. It installs next to EasyControl, not over it.
 - **Android 16 black screen fixed.** On Android 14+ the server mirrors the screen with `DisplayManager.createVirtualDisplay(name, width, height, displayIdToMirror, surface)`, as scrcpy does, and falls back to `SurfaceControl` if that fails.
 - **Resolution tiers follow the phone screen:** native, 80%, 60%, 40%.
 - **Change resolution on connect can match the phone.** The tablet switches to the phone's screen resolution, orientation matched automatically, and switches back on disconnect.
@@ -54,7 +55,7 @@ Both devices must be on the same network or joined by a VPN. Audio forwarding ne
 
 You need JDK 21 and the Android SDK (platforms 34 and 35). Set `ANDROID_HOME`, or put `sdk.dir=...` in `easycontrol/local.properties`.
 
-Create a signing key once and keep it. Every later build must use the same key, or you will have to uninstall before updating.
+Create a signing key once and keep it. Every later build must use the same key, or you will have to uninstall before updating. Without the key the release APK is left unsigned.
 
 ```bash
 keytool -genkeypair -keystore easycontrol/app/doc/release.jks -storetype JKS \
@@ -73,6 +74,7 @@ The APK is written to `easycontrol/app/build/outputs/apk/release/`.
 ## Notes
 
 - Install it on the controlling device only.
+- Coming from EasyControl, add your devices again. To skip the debugging prompt on the controlled device, copy both keys from EasyControl's Settings → *Custom ADB key* into PadKite's.
 - The server jar on the controlled device is named after the versionCode and a checksum of its contents, so a changed server is pushed again on the next connect.
 - Port 25166 has no authentication. Do not expose it, or the ADB port, to the internet. Use a VPN instead.
 - To see which capture path is in use, run `adb logcat -s Easycontrol_Server` on the controlled device.

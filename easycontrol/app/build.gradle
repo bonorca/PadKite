@@ -6,7 +6,7 @@ android {
     namespace 'top.saymzx.easycontrol.app'
     compileSdk 35
     defaultConfig {
-        applicationId "top.saymzx.easycontrol.app"
+        applicationId "io.github.chillibeaver.padkite"
         minSdk 23
         targetSdk 34
         versionCode 10701
@@ -18,29 +18,33 @@ android {
     viewBinding {
         enabled = true
     }
+    // 密钥不在仓库里：没有 doc/release.jks 时 release 不签名（F-Droid 用自己的密钥签）
+    def releaseKey = file("doc/release.jks")
     signingConfigs {
-        debug {
-            storeFile file("doc/release.jks")
-            storePassword "123456"
-            keyAlias "test"
-            keyPassword "123456"
-        }
-        release {
-            storeFile file("doc/release.jks")
-            storePassword "123456"
-            keyAlias "test"
-            keyPassword "123456"
+        if (releaseKey.exists()) {
+            debug {
+                storeFile releaseKey
+                storePassword "123456"
+                keyAlias "test"
+                keyPassword "123456"
+            }
+            release {
+                storeFile releaseKey
+                storePassword "123456"
+                keyAlias "test"
+                keyPassword "123456"
+            }
         }
     }
     buildTypes {
         debug {
             applicationIdSuffix ".debug" //包名后缀
             buildConfigField "boolean", "ENABLE_DEBUG_FEATURE", "true"
-            manifestPlaceholders = [app_name: "@string/app_name_dev", app_icon: "@mipmap/ic_launcher_dev", app_icon_round: "@mipmap/ic_launcher_dev_round"]
+            manifestPlaceholders = [app_name: "@string/app_name_dev", app_icon: "@mipmap/ic_launcher", app_icon_round: "@mipmap/ic_launcher_round"]
             debuggable true
         }
         release {
-            signingConfig signingConfigs.release
+            if (releaseKey.exists()) signingConfig signingConfigs.release
             buildConfigField "boolean", "ENABLE_DEBUG_FEATURE", "false"
             manifestPlaceholders = [app_name: "@string/app_name", app_icon: "@mipmap/ic_launcher", app_icon_round: "@mipmap/ic_launcher_round"]
             debuggable false
@@ -66,7 +70,7 @@ android {
 androidComponents {
     onVariants(selector().all()) { variant ->
         variant.outputs.forEach { output ->
-            output.outputFileName.set("EasyControl_v${output.versionName.get()}_${variant.buildType}.apk")
+            output.outputFileName.set("PadKite_v${output.versionName.get()}_${variant.buildType}.apk")
         }
     }
 }

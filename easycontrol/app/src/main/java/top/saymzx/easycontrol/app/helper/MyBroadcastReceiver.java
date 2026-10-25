@@ -23,9 +23,9 @@ import top.saymzx.easycontrol.app.entity.Device;
 
 public class MyBroadcastReceiver extends BroadcastReceiver {
 
-    public static final String ACTION_UPDATE_USB = "top.saymzx.easycontrol.app.UPDATE_USB";
-    private static final String ACTION_USB_PERMISSION = "top.saymzx.easycontrol.app.USB_PERMISSION";
-    public static final String ACTION_UPDATE_DEVICE_LIST = "top.saymzx.easycontrol.app.UPDATE_DEVICE_LIST";
+    public static final String ACTION_UPDATE_USB = "io.github.chillibeaver.padkite.UPDATE_USB";
+    private static final String ACTION_USB_PERMISSION = "io.github.chillibeaver.padkite.USB_PERMISSION";
+    public static final String ACTION_UPDATE_DEVICE_LIST = "io.github.chillibeaver.padkite.UPDATE_DEVICE_LIST";
     private static final String ACTION_SCREEN_OFF = "android.intent.action.SCREEN_OFF";
 
     private DeviceListAdapter deviceListAdapter;

@@ -680,12 +680,12 @@ public class ClientController implements TextureView.SurfaceTextureListener {
         try {
             Bitmap bitmap = BitmapFactory.decodeByteArray(png, 0, png.length);
             if (bitmap == null) throw new Exception("decode fail");
-            String name = "easycontrol_" + System.currentTimeMillis() + ".png";
+            String name = "padkite_" + System.currentTimeMillis() + ".png";
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.Images.Media.DISPLAY_NAME, name);
                 values.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
-                values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Easycontrol");
+                values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/PadKite");
                 Uri uri = AppData.applicationContext.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
                 if (uri == null) throw new Exception("insert fail");
                 try (OutputStream outputStream = AppData.applicationContext.getContentResolver().openOutputStream(uri)) {

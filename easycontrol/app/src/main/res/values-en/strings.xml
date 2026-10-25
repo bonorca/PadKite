@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?><!-- 感谢群友 @λ 提供的翻译，原谅我之前只能用机器翻译 -->
 <resources>
-    <string name="app_name">EasyControl</string>
-    <string name="app_name_simple">EasyControl</string>
-    <string name="app_name_dev">EasyControlBeta</string>
+    <string name="app_name">PadKite</string>
+    <string name="app_name_simple">PadKite</string>
+    <string name="app_name_dev">PadKite Beta</string>
 
     <!-- 页面标题 -->
     <string name="title_device_detail">Device Settings</string>

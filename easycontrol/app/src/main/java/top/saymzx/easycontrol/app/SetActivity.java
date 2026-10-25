@@ -56,8 +56,8 @@ public class SetActivity extends AppCompatActivity {
                     .show();
         }).getRoot());
         // 关于
-        activitySetBinding.setAbout.addView(ViewTools.createTextCard(this, getString(R.string.set_about_website), () -> PublicTools.startUrl(this, "https://github.com/chillibeaver/Easycontrol-Android16")).getRoot());
-        activitySetBinding.setAbout.addView(ViewTools.createTextCard(this, getString(R.string.set_about_check_update), () -> PublicTools.startUrl(this, "https://github.com/chillibeaver/Easycontrol-Android16/releases/latest")).getRoot());
+        activitySetBinding.setAbout.addView(ViewTools.createTextCard(this, getString(R.string.set_about_website), () -> PublicTools.startUrl(this, "https://github.com/chillibeaver/PadKite")).getRoot());
+        activitySetBinding.setAbout.addView(ViewTools.createTextCard(this, getString(R.string.set_about_check_update), () -> PublicTools.startUrl(this, "https://github.com/chillibeaver/PadKite/releases/latest")).getRoot());
         activitySetBinding.setVersion.setText(getString(R.string.set_about_version, BuildConfig.VERSION_NAME));
     }
 
