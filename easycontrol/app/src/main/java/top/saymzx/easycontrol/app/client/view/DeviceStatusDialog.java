@@ -59,14 +59,21 @@ public class DeviceStatusDialog {
                 String.format(Locale.US, "%.1f GB", s.storageUsedKb / 1048576f),
                 String.format(Locale.US, "%.1f GB", s.storageTotalKb / 1048576f))
                 : "—");
+        // 一加等厂商的亮度范围不是 0~255(一加 Pad 3 是 2~1745，强光下还能更高)：有厂商上限按它算；
+        // 没有就按原生 0~255，超出说明是不认识的厂商范围，宁可不显示也不显示错的
+        int brightnessPercent = -1;
+        if (s.brightness >= 0) {
+            if (s.brightnessMax > 0) brightnessPercent = Math.min(100, s.brightness * 100 / s.brightnessMax);
+            else if (s.brightness <= 255) brightnessPercent = s.brightness * 100 / 255;
+        }
         b.statusBrightness.setText(s.brightnessAuto
                 ? context.getString(R.string.dialog_status_brightness_auto)
-                : s.brightness >= 0 ? (s.brightness * 100 / 255) + "%" : "—");
+                : brightnessPercent >= 0 ? brightnessPercent + "%" : "—");
         b.statusUptime.setText(formatUptime(context, s.uptimeSec));
         b.statusConnection.setText(device.isLinkDevice()
                 ? context.getString(R.string.dialog_status_conn_usb)
                 : context.getString(R.string.dialog_status_conn_wireless));
-        b.statusEncoding.setText((device.useH265 ? "H.265" : "H.264") + " · " + device.maxFps + "fps"
+        b.statusEncoding.setText((s.codec.isEmpty() ? "—" : s.codec) + " · " + device.maxFps + "fps"
                 + (device.maxVideoBit > 0 ? " · " + device.maxVideoBit + "Mbps" : ""));
         // 弹窗
         AlertDialog dialog = new AlertDialog.Builder(context).setView(b.getRoot()).setCancelable(true).create();

@@ -48,6 +48,7 @@ Both devices must be on the same network or joined by a VPN. Audio forwarding ne
 - **Fork branding removed.**
 - **Single-app casting removed.** It could not create its virtual display on Android 16 and fell back to a normal mirror.
 - **External control broadcast removed.** Its sender check never worked, and it could run shell commands on the controlled device.
+- **Device status fixed.** On Android 16 the battery showed the capacity level (3%) instead of the charge. Brightness now uses the vendor's range, resolution is the controlled device's screen, and encoding is the codec actually in use.
 
 ## Build
 

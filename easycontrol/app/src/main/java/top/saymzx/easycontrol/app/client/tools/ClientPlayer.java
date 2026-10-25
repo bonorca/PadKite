@@ -117,6 +117,7 @@ public class ClientPlayer {
         Surface surface = null;
         try {
             int codecType = clientStream.readByteFromVideo();
+            clientController.setVideoCodecType(codecType);
             Pair<Integer, Integer> videoSize = new Pair<>(clientStream.readIntFromVideo(), clientStream.readIntFromVideo());
             surface = new Surface(clientController.getTextureView().getSurfaceTexture());
             ByteBuffer csd0 = clientStream.readFrameFromVideo();

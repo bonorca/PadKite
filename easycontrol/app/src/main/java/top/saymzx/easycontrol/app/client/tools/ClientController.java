@@ -64,6 +64,8 @@ public class ClientController implements TextureView.SurfaceTextureListener {
     private FullActivity fullView;
 
     private volatile Pair<Integer, Integer> videoSize;
+    // 视频流头里服务端实际选的编码：0 H.264，1 H.265，-1 还没收到
+    private volatile int videoCodecType = -1;
     private volatile Pair<Integer, Integer> maxSize;
     private volatile Pair<Integer, Integer> surfaceSize;
 
@@ -330,6 +332,10 @@ public class ClientController implements TextureView.SurfaceTextureListener {
         int height = Math.max(byteBuffer.getInt(), minLength);
         this.maxSize = new Pair<>(width, height);
         AppData.uiHandler.post(this::reCalculateTextureViewSize);
+    }
+
+    public void setVideoCodecType(int codecType) {
+        videoCodecType = codecType;
     }
 
     private void updateVideoSize(ByteBuffer byteBuffer) {
@@ -717,10 +723,12 @@ public class ClientController implements TextureView.SurfaceTextureListener {
         public long ramKb = 0;
         public long storageTotalKb = 0;
         public long storageUsedKb = 0;
-        public int brightness = -1;     // 0~255，-1 未知
+        public int brightness = -1;     // 系统设置里的亮度值，-1 未知
+        public int brightnessMax = 0;   // 厂商给的亮度上限，0 表示没有(按原生 0~255)
         public boolean brightnessAuto = false;
         public long uptimeSec = 0;
-        public String resolution = "";
+        public String resolution = "";  // 被控端屏幕当前的分辨率
+        public String codec = "";
     }
 
     // 读取被控机状态：一次shell按标记分段读电池/属性/内核/内存/存储/亮度/运行时长，分辨率用已有videoSize
@@ -731,19 +739,23 @@ public class ClientController implements TextureView.SurfaceTextureListener {
                         "echo '<<K>>'; uname -r;" +
                         "echo '<<M>>'; cat /proc/meminfo;" +
                         "echo '<<D>>'; df /data;" +
-                        "echo '<<L>>'; settings get system screen_brightness; settings get system screen_brightness_mode;" +
-                        "echo '<<T>>'; cat /proc/uptime");
+                        "echo '<<L>>'; settings get system screen_brightness; settings get system screen_brightness_mode; getprop sys.oplus.multibrightness;" +
+                        "echo '<<T>>'; cat /proc/uptime;" +
+                        "echo '<<W>>'; wm size");
         DeviceStatus s = new DeviceStatus();
         int b = output.indexOf("<<B>>"), p = output.indexOf("<<P>>"), k = output.indexOf("<<K>>"),
-                m = output.indexOf("<<M>>"), d = output.indexOf("<<D>>"), l = output.indexOf("<<L>>"), t = output.indexOf("<<T>>");
+                m = output.indexOf("<<M>>"), d = output.indexOf("<<D>>"), l = output.indexOf("<<L>>"), t = output.indexOf("<<T>>"),
+                w = output.indexOf("<<W>>");
         if (b >= 0 && p > b) parseBattery(s, output.substring(b + 5, p));
         if (p >= 0 && k > p) parseProps(s, output.substring(p + 5, k));
         if (k >= 0 && m > k) s.kernel = output.substring(k + 5, m).trim();
         if (m >= 0 && d > m) parseMem(s, output.substring(m + 5, d));
         if (d >= 0 && l > d) parseDf(s, output.substring(d + 5, l));
         if (l >= 0 && t > l) parseBrightness(s, output.substring(l + 5, t));
-        if (t >= 0) parseUptime(s, output.substring(t + 5));
-        if (videoSize != null) s.resolution = videoSize.first + "×" + videoSize.second;
+        if (t >= 0 && w > t) parseUptime(s, output.substring(t + 5, w));
+        if (w >= 0) parseScreenSize(s, output.substring(w + 5));
+        if (videoCodecType == 0) s.codec = "H.264";
+        else if (videoCodecType == 1) s.codec = "H.265";
         return s;
     }
 
@@ -846,24 +858,39 @@ public class ClientController implements TextureView.SurfaceTextureListener {
         }
     }
 
+    // 三行：亮度值、是否自动、一加/OPPO 的亮度上限(sys.oplus.multibrightness，如 1745；别的机型没有这个属性，输出空行)
     private void parseBrightness(DeviceStatus s, String section) {
-        String v0 = "", v1 = "";
-        for (String line : section.split("\n")) {
-            String v = line.trim();
-            if (v.isEmpty()) continue;
-            if (v0.isEmpty()) v0 = v;
-            else {
-                v1 = v;
-                break;
-            }
-        }
-        if (!v0.isEmpty() && !"null".equals(v0)) {
-            try {
-                s.brightness = Integer.parseInt(v0);
-            } catch (NumberFormatException ignored) {
-            }
+        String[] values = section.trim().split("\n");
+        String v0 = values.length > 0 ? values[0].trim() : "";
+        String v1 = values.length > 1 ? values[1].trim() : "";
+        String v2 = values.length > 2 ? values[2].trim() : "";
+        try {
+            s.brightness = Integer.parseInt(v0);
+        } catch (NumberFormatException ignored) {
         }
         s.brightnessAuto = "1".equals(v1);
+        try {
+            s.brightnessMax = Integer.parseInt(v2);
+        } catch (NumberFormatException ignored) {
+        }
+    }
+
+    // wm size：有 Override(连接时改过分辨率)就是它，没有就是 Physical；给的是自然方向，横竖按画面摆
+    private void parseScreenSize(DeviceStatus s, String section) {
+        Matcher matcher = Pattern.compile("Override size: (\\d+)x(\\d+)").matcher(section);
+        if (!matcher.find()) {
+            matcher = Pattern.compile("Physical size: (\\d+)x(\\d+)").matcher(section);
+            if (!matcher.find()) return;
+        }
+        int width = Integer.parseInt(matcher.group(1));
+        int height = Integer.parseInt(matcher.group(2));
+        Pair<Integer, Integer> video = videoSize;
+        if (video != null && (video.first > video.second) != (width > height)) {
+            int tmp = width;
+            width = height;
+            height = tmp;
+        }
+        s.resolution = width + "×" + height;
     }
 
     private void parseUptime(DeviceStatus s, String section) {
