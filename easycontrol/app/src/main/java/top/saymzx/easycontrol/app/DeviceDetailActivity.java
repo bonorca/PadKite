@@ -31,6 +31,7 @@ public class DeviceDetailActivity extends AppCompatActivity {
     private ActivityDeviceDetailBinding activityDeviceDetailBinding;
     private boolean isNew;
     private Device device;
+    private Device openedDevice;
     private ItemSpinnerBinding maxVideoBitSpinner;
     private ItemSwitchBinding customResolutionFollowCard;
     private boolean customResolutionOn;
@@ -48,7 +49,10 @@ public class DeviceDetailActivity extends AppCompatActivity {
         if (isNew) {
             device = new Device(UUID.randomUUID().toString(), Device.TYPE_NETWORK);
             device.name = AppData.dbHelper.getDefaultDeviceName();
-        } else device = AppData.dbHelper.getByUUID(uuid);
+        } else {
+            device = AppData.dbHelper.getByUUID(uuid);
+            if (device != null) openedDevice = device.clone(device.uuid);
+        }
         // 设备已被删除（UUID过期），直接退出
         if (device == null) {
             finish();
@@ -197,7 +201,11 @@ public class DeviceDetailActivity extends AppCompatActivity {
             }
             // 更新数据库
             if (isNew) AppData.dbHelper.insert(device);
-            else AppData.dbHelper.update(device);
+            else {
+                Device latest = AppData.dbHelper.getByUUID(device.uuid);
+                if (latest != null && openedDevice != null) device.keepSessionPrefs(openedDevice, latest);
+                AppData.dbHelper.update(device);
+            }
             Intent intent = new Intent();
             intent.setAction(MyBroadcastReceiver.ACTION_UPDATE_DEVICE_LIST);
             sendBroadcast(intent);

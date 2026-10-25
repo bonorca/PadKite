@@ -5,6 +5,7 @@ import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -36,6 +37,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -64,6 +67,10 @@ public class ClientController implements TextureView.SurfaceTextureListener {
     private volatile Pair<Integer, Integer> maxSize;
     private volatile Pair<Integer, Integer> surfaceSize;
 
+    // 会话级界面状态：全屏和小窗切换、旋转重建后保持
+    private volatile boolean navBarShown;
+    private volatile boolean screenOff = false;
+
     // 执行线程
     private final HandlerThread mainThread = new HandlerThread("easycontrol_client_main");
     private Handler mainHandler;
@@ -72,9 +79,12 @@ public class ClientController implements TextureView.SurfaceTextureListener {
         this.device = device;
         this.clientStream = clientStream;
         this.handle = handle;
+        navBarShown = device.showNavBarOnConnect;
+        mouseMode = device.mouseMode;
         mainThread.start();
         mainHandler = new Handler(mainThread.getLooper());
         textureView.setSurfaceTextureListener(this);
+        textureView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> updateCursorOverlayPosition());
         setTouchListener();
         // 启动子服务
         mainHandler.post(this::otherService);
@@ -110,10 +120,12 @@ public class ClientController implements TextureView.SurfaceTextureListener {
                     clientStream.writeToMain(ControlPacket.createPowerEvent(0));
                     break;
                 case "buttonLight":
+                    screenOff = false;
                     // 只发正常模式：原来再补一个 STATE_OFF(=1) 会让面板停在 Doze(暗屏)
                     clientStream.writeToMain(ControlPacket.createLightEvent(Display.STATE_ON));
                     break;
                 case "buttonLightOff":
+                    screenOff = true;
                     clientStream.writeToMain(ControlPacket.createLightEvent(Display.STATE_UNKNOWN));
                     break;
                 case "buttonBack":
@@ -186,7 +198,7 @@ public class ClientController implements TextureView.SurfaceTextureListener {
         handleAction("checkClipBoard", null, 0);
         handleAction("keepAlive", null, 0);
         handleAction("checkSizeAndSite", null, 0);
-        // 心跳超时检测：如果超过10秒未收到服务端任何数据，则认为连接已断开
+        // 心跳超时检测：如果超过30秒未收到服务端任何数据，则认为连接已断开
         ClientPlayer player = Client.getClientPlayer(device.uuid);
         if (player != null && player.isKeepAliveTimeout()) {
             byte[] err = ("controller" + AppData.applicationContext.getString(R.string.toast_stream_closed) + "keepAliveTimeout").getBytes(StandardCharsets.UTF_8);
@@ -194,6 +206,52 @@ public class ClientController implements TextureView.SurfaceTextureListener {
             return;
         }
         mainHandler.postDelayed(this::otherService, 2000);
+    }
+
+    public boolean isNavBarShown() {
+        return navBarShown;
+    }
+
+    // 导航栏开关记到设备上，下次连接照旧
+    public void setNavBarShown(boolean isShow) {
+        navBarShown = isShow;
+        device.showNavBarOnConnect = isShow;
+        saveDevice();
+    }
+
+    // 设备偏好(导航栏、自动旋转、横竖屏等)改了马上存，不等断开：App 被杀也不丢。
+    // 单独一个线程写：控制线程断网时会卡在发包上；只写会话里会改的列，不覆盖设备设置页里的改动
+    private static final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
+
+    public void saveDevice() {
+        if (device.isTempDevice()) return;
+        dbExecutor.execute(() -> {
+            try {
+                AppData.dbHelper.updatePrefs(device);
+            } catch (Exception ignored) {
+            }
+        });
+    }
+
+    // 熄屏控制：被控端屏幕关掉、画面照常传
+    public boolean isScreenOff() {
+        return screenOff;
+    }
+
+    // 连接时自动熄屏：状态先设好(面板高亮马上对)，2 秒后还想熄屏才发，期间在面板里关掉了就不发
+    public void screenOffOnConnect() {
+        screenOff = true;
+        mainHandler.postDelayed(() -> {
+            if (screenOff) handleAction("buttonLightOff", null);
+        }, 2000);
+    }
+
+    // 面板里切换会记住：下次连接按“连接时关闭背光”自动熄屏
+    public void setScreenOff(boolean isOff) {
+        screenOff = isOff;
+        device.lightOffOnConnect = isOff;
+        saveDevice();
+        handleAction(isOff ? "buttonLightOff" : "buttonLight", null, 0);
     }
 
     public void setFullView(FullActivity fullView) {
@@ -206,10 +264,13 @@ public class ClientController implements TextureView.SurfaceTextureListener {
 
     private synchronized void changeToFull() {
         hide();
-        if (AppData.mainActivity == null) return;
-        Intent intent = new Intent(AppData.mainActivity, FullActivity.class);
+        // 主页面已被系统回收(从最近任务划掉、前台服务还在)时用应用上下文开，不然会话还在却没有任何窗口
+        Context mainActivity = AppData.mainActivity;
+        Context context = mainActivity != null ? mainActivity : AppData.applicationContext;
+        Intent intent = new Intent(context, FullActivity.class);
         intent.putExtra("uuid", device.uuid);
-        AppData.mainActivity.startActivity(intent);
+        if (mainActivity == null) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(intent);
     }
 
     private synchronized void changeToSmall() {
@@ -219,8 +280,11 @@ public class ClientController implements TextureView.SurfaceTextureListener {
             changeToFull();
         } else {
             if (smallView == null) smallView = new SmallView(device.uuid);
-            AppData.uiHandler.post(smallView::show);
-            updateSite(null);
+            // 显示之后再按画面横竖套用记住的位置：直接调的话小窗还没显示，横屏画面的位置(smallXLan/YLan)套不上
+            AppData.uiHandler.post(() -> {
+                smallView.show();
+                handleAction("updateSite", null, 0);
+            });
         }
     }
 
@@ -468,8 +532,11 @@ public class ClientController implements TextureView.SurfaceTextureListener {
         return mouseMode;
     }
 
-    private void toggleMouse() {
+    // 在界面线程调用：开关状态立即生效，面板高亮不会读到旧值
+    public void toggleMouse() {
         mouseMode = !mouseMode;
+        device.mouseMode = mouseMode;
+        saveDevice();
         if (mouseMode) showCursorOverlay();
         else hideCursorOverlay();
     }
@@ -483,6 +550,7 @@ public class ClientController implements TextureView.SurfaceTextureListener {
                 cursorOverlay = new ImageView(AppData.applicationContext);
                 cursorOverlay.setImageResource(R.drawable.cursor);
                 cursorOverlay.setClickable(false);
+                cursorOverlay.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> updateCursorOverlayPosition());
                 int size = PublicTools.dp2px(22f);
                 parent.addView(cursorOverlay, new FrameLayout.LayoutParams(size, size));
             } else if (cursorOverlay.getParent() != parent) {

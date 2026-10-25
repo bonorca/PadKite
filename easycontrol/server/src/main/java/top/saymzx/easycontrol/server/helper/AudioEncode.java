@@ -93,14 +93,5 @@ public final class AudioEncode {
         }
     }
 
-    public static void release() {
-        try {
-            encedec.stop();
-            encedec.release();
-            audioCapture.stop();
-            audioCapture.release();
-        } catch (Exception ignored) {
-        }
-    }
 }
 

@@ -2,6 +2,7 @@ package top.saymzx.easycontrol.app.client.tools;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -11,6 +12,7 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.CRC32;
 
 import top.saymzx.easycontrol.app.BuildConfig;
 import top.saymzx.easycontrol.app.R;
@@ -35,7 +37,20 @@ public class ClientStream {
     private BufferStream videoBufferStream;
     private BufferStream shell;
     private Thread connectThread = null;
-    private static final String serverName = "/data/local/tmp/easycontrol_server_" + BuildConfig.VERSION_CODE + ".jar";
+    // 文件名带服务端内容的校验值：服务端改了就会重新推送，不用靠记得改 versionCode
+    private static final String serverName = "/data/local/tmp/easycontrol_server_" + BuildConfig.VERSION_CODE + "_" + serverChecksum() + ".jar";
+
+    private static String serverChecksum() {
+        CRC32 crc = new CRC32();
+        try (InputStream in = AppData.applicationContext.getResources().openRawResource(R.raw.easycontrol_server)) {
+            byte[] buffer = new byte[64 * 1024];
+            int len;
+            while ((len = in.read(buffer)) > 0) crc.update(buffer, 0, len);
+        } catch (Exception ignored) {
+            return "0";
+        }
+        return Long.toHexString(crc.getValue());
+    }
     private static final boolean supportH265 = DecodecTools.isSupportH265();
     private static final boolean supportOpus = DecodecTools.isSupportOpus();
 

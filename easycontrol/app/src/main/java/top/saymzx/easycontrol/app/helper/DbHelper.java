@@ -16,7 +16,7 @@ import top.saymzx.easycontrol.app.entity.Device;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String dataBaseName = "app.db";
-    private static final int version = 25;
+    private static final int version = 29;
     private final String tableName = "DevicesDb";
 
     public DbHelper(Context context) {
@@ -46,6 +46,9 @@ public class DbHelper extends SQLiteOpenHelper {
         stringBuilder.append("wakeOnConnect integer,");
         stringBuilder.append("lightOffOnConnect integer,");
         stringBuilder.append("showNavBarOnConnect integer,");
+        stringBuilder.append("autoRotate integer,");
+        stringBuilder.append("fullOrientation integer,");
+        stringBuilder.append("mouseMode integer,");
         stringBuilder.append("changeToFullOnConnect integer,");
         stringBuilder.append("keepWakeOnRunning integer,");
         stringBuilder.append("changeResolutionOnRunning integer,");
@@ -74,6 +77,17 @@ public class DbHelper extends SQLiteOpenHelper {
         if (oldVersion < version) {
             // 获取旧数据
             ArrayList<Device> devices = getAll(db);
+            // 26：连接后默认全屏，老设备也改过来
+            if (oldVersion < 26) for (Device device : devices) device.changeToFullOnConnect = true;
+            // 27：自动旋转从全局设置改成每个设备各记各的，沿用原来的全局值
+            if (oldVersion < 27 && AppData.setting != null)
+                for (Device device : devices) device.autoRotate = AppData.setting.getAutoRotate();
+            // 29：连接时修改分辨率默认打开并跟随本机屏幕(以前只有子选项默认开，总开关是关的，等于没生效)
+            if (oldVersion < 29) for (Device device : devices) {
+                if (device.customResolutionOnConnect) continue;
+                device.customResolutionOnConnect = true;
+                device.customResolutionFollow = true;
+            }
             // 修改表名
             db.execSQL("alter table " + tableName + " rename to tempTable");
             // 新建新表
@@ -126,6 +140,24 @@ public class DbHelper extends SQLiteOpenHelper {
         getWritableDatabase().update(tableName, getValues(device), "uuid=?", new String[]{device.uuid});
     }
 
+    // 只写会话里会改的偏好(导航栏、熄屏、自动旋转、横竖屏、鼠标、小窗和最小化条位置)，不覆盖设备设置页存的其他项
+    public void updatePrefs(Device device) {
+        ContentValues values = new ContentValues();
+        values.put("showNavBarOnConnect", device.showNavBarOnConnect ? 1 : 0);
+        values.put("lightOffOnConnect", device.lightOffOnConnect ? 1 : 0);
+        values.put("autoRotate", device.autoRotate ? 1 : 0);
+        values.put("fullOrientation", device.fullOrientation);
+        values.put("mouseMode", device.mouseMode ? 1 : 0);
+        values.put("smallX", device.smallX);
+        values.put("smallY", device.smallY);
+        values.put("smallLength", device.smallLength);
+        values.put("smallXLan", device.smallXLan);
+        values.put("smallYLan", device.smallYLan);
+        values.put("smallLengthLan", device.smallLengthLan);
+        values.put("miniY", device.miniY);
+        getWritableDatabase().update(tableName, values, "uuid=?", new String[]{device.uuid});
+    }
+
     // 删除
     public void delete(Device device) {
         getWritableDatabase().delete(tableName, "uuid=?", new String[]{device.uuid});
@@ -152,6 +184,9 @@ public class DbHelper extends SQLiteOpenHelper {
         values.put("wakeOnConnect", device.wakeOnConnect ? 1 : 0);
         values.put("lightOffOnConnect", device.lightOffOnConnect ? 1 : 0);
         values.put("showNavBarOnConnect", device.showNavBarOnConnect ? 1 : 0);
+        values.put("autoRotate", device.autoRotate ? 1 : 0);
+        values.put("fullOrientation", device.fullOrientation);
+        values.put("mouseMode", device.mouseMode ? 1 : 0);
         values.put("changeToFullOnConnect", device.changeToFullOnConnect ? 1 : 0);
         values.put("keepWakeOnRunning", device.keepWakeOnRunning ? 1 : 0);
         values.put("changeResolutionOnRunning", device.changeResolutionOnRunning ? 1 : 0);
@@ -321,6 +356,18 @@ public class DbHelper extends SQLiteOpenHelper {
                 }
                 case "miniY": {
                     device.miniY = cursor.getInt(i);
+                    break;
+                }
+                case "autoRotate": {
+                    device.autoRotate = cursor.getInt(i) == 1;
+                    break;
+                }
+                case "fullOrientation": {
+                    device.fullOrientation = cursor.getInt(i);
+                    break;
+                }
+                case "mouseMode": {
+                    device.mouseMode = cursor.getInt(i) == 1;
                     break;
                 }
             }

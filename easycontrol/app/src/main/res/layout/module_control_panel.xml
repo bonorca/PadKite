@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?><!-- 控制面板：半透明遮罩 + 居中卡片(标题、导航键、音量、功能按钮、断开)，点遮罩关闭 -->
+<!-- 小窗模式下用 Application Context 膨胀，图标染色只能用 android:tint -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scrim"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/clientScrim"
+    tools:ignore="UseAppTint">
+
+    <ScrollView
+        android:id="@+id/card"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_margin="@dimen/spaceLg"
+        android:background="@drawable/background_client_panel"
+        android:clickable="true"
+        android:focusable="false"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/spaceLg"
+            android:paddingTop="@dimen/spaceSm"
+            android:paddingEnd="@dimen/spaceLg"
+            android:paddingBottom="@dimen/spaceLg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textColor="@color/onBlackBacnground"
+                    android:textSize="@dimen/smallFont"
+                    android:textStyle="bold" />
+
+                <ImageView
+                    android:id="@+id/button_close"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="-8dp"
+                    android:background="@drawable/background_client_button"
+                    android:focusable="false"
+                    android:padding="12dp"
+                    android:src="@drawable/x"
+                    android:tint="@color/onBlackBacnground" />
+            </LinearLayout>
+
+            <!-- 竖屏上下排，横屏左右排(代码里切换) -->
+            <LinearLayout
+                android:id="@+id/controls_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spaceXs"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/nav_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/background_client_group"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/button_back"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/background_client_button"
+                        android:focusable="false"
+                        android:padding="14dp"
+                        android:src="@drawable/caret_left"
+                        android:tint="@color/onBlackBacnground" />
+
+                    <ImageView
+                        android:id="@+id/button_home"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/background_client_button"
+                        android:focusable="false"
+                        android:padding="14dp"
+                        android:src="@drawable/o"
+                        android:tint="@color/onBlackBacnground" />
+
+                    <ImageView
+                        android:id="@+id/button_switch"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/background_client_button"
+                        android:focusable="false"
+                        android:padding="14dp"
+                        android:src="@drawable/square"
+                        android:tint="@color/onBlackBacnground" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/volume_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="@dimen/spaceSm"
+                    android:background="@drawable/background_client_group"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingEnd="@dimen/spaceMd"
+                    tools:ignore="RtlSymmetry">
+
+                    <ImageView
+                        android:id="@+id/button_mute"
+                        android:layout_width="48dp"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/background_client_button"
+                        android:focusable="false"
+                        android:padding="13dp"
+                        android:src="@drawable/volume_up"
+                        android:tint="@color/onBlackBacnground" />
+
+                    <SeekBar
+                        android:id="@+id/seekbar_volume"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:focusable="false"
+                        android:max="100"
+                        android:maxHeight="4dp"
+                        android:minHeight="4dp"
+                        android:progressBackgroundTint="@color/clientTextSecond"
+                        android:progressTint="@color/clientTileOn"
+                        android:splitTrack="false"
+                        android:thumbTint="@color/onBlackBacnground" />
+
+                    <TextView
+                        android:id="@+id/text_volume"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:textColor="@color/clientTextSecond"
+                        android:textSize="@dimen/smallSmallFont" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/tiles"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="-4dp"
+                android:layout_marginTop="@dimen/spaceXs"
+                android:layout_marginEnd="-4dp"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/button_disconnect"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="@dimen/spaceSm"
+                android:background="@drawable/background_client_alert"
+                android:focusable="false"
+                android:gravity="center"
+                android:text="@string/panel_disconnect"
+                android:textColor="@color/onClientAlert"
+                android:textSize="@dimen/smallFont"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

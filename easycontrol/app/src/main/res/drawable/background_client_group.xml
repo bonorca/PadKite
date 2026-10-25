@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?><!-- 控制面板分组底色(导航键、音量)，里面的按钮自带涟漪 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="@dimen/cronSmall" />
+    <solid android:color="@color/clientTile" />
+</shape>

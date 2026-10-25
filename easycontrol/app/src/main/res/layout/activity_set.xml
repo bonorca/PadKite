@@ -89,6 +89,16 @@
                 android:paddingEnd="@dimen/cardPaddingH"
                 android:paddingBottom="@dimen/spaceMd" />
 
+            <TextView
+                android:id="@+id/set_version"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spaceXl"
+                android:layout_marginBottom="@dimen/spaceXl"
+                android:gravity="center"
+                android:textColor="@color/onBackgroundSecond"
+                android:textSize="@dimen/smallSmallFont" />
+
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

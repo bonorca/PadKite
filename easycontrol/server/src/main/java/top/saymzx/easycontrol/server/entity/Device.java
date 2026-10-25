@@ -19,6 +19,9 @@ import android.view.MotionEvent;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -382,12 +385,122 @@ public final class Device {
     public static void runCloseActions() {
         // KEYCODE_SLEEP / KEYCODE_WAKEUP 不像电源键那样会把状态反过来
         if (Options.lockOnClose) keyEvent(223, 0);
-        else if (Options.lightOnClose) {
-            keyEvent(224, 0);
-            // 熄屏控制下系统以为屏幕亮着，唤醒键不管用，要把面板电源模式改回正常
-            if (isScreenPowerOff) changeScreenPowerMode(2);
+        else if (Options.lightOnClose) keyEvent(224, 0);
+    }
+
+    // 熄屏控制关掉的面板不管什么设置都要打开：不然系统以为屏幕亮着，平板看着像死机，唤醒键也不管用
+    public static void restoreScreenPower() {
+        if (isScreenPowerOff) changeScreenPowerMode(2);
+    }
+
+    // 断开时静音用系统的“静音”开关，不改档位：它对外放、转发、耳机所有输出一起生效，和当前声音送到哪无关。
+    // (音频转发时系统把媒体声音送进 REMOTE_SUBMIX，还给它单独记一份档位，会话中读写的 STREAM_MUSIC 档位都是转发那份；
+    // 停了录音，有声音在播时路由也要过好几秒才回外放。以前断开时把档位调成 0，调的是转发那份，下次连上手机没声音。)
+    // 平板上按音量加会自动取消静音，回到原来的档位。
+    // 标记文件是唯一依据(每个会话开始和结束都重新读)，先写标记再改静音，断电、被顶掉也接得上：
+    //   没有：没有要还原的；这时静着音就是用户自己静的
+    //   "ours"：断开时我们加的静音(或者它被这个会话临时取消了)；下次连接取消
+    //   "user"：为了转发临时取消了用户自己的静音；会话结束(哪怕是下一个会话)要静回去
+    // 名字故意不叫 easycontrol_*：客户端推新服务端时会删 easycontrol_* 文件
+    private static final String MUTE_MARK = "/data/local/tmp/easycontrol-muted";
+    private static final Object volumeLock = new Object();
+    private static boolean isVolumeFinished = false;
+
+    // 连接时调用，音频编码已初始化
+    public static void prepareVolume(boolean isForwarding) {
+        boolean onSubmix = isForwarding && AudioManager.waitMediaOnRemoteSubmix(true, 1000);
+        synchronized (volumeLock) {
+            // 会话已经在结束了(启动太慢超时、连接出错)就别再动
+            if (isVolumeFinished) return;
+            String mark = readMuteMark();
+            Boolean muteState = AudioManager.isStreamMute(3);
+            // 查不到就当静着音：取消静音是无害的
+            boolean isMuted = !Boolean.FALSE.equals(muteState);
+            if ("user".equals(mark)) {
+                // 上个会话取消了用户的静音没来得及静回去(被新连接顶掉、崩了)：转发就接着取消，不转发就还回去
+                if (isForwarding) {
+                    if (isMuted) unmute(onSubmix);
+                } else {
+                    mute();
+                    writeMuteMark(null);
+                }
+            } else if ("ours".equals(mark)) {
+                // 标记留着：会话没建立就结束时还要静回去
+                if (isMuted) unmute(!isForwarding || onSubmix);
+            } else if (Boolean.TRUE.equals(muteState) && isForwarding) {
+                // 用户自己静的音，可转发过去的也会是静音：先记下来再取消
+                writeMuteMark("user");
+                unmute(onSubmix);
+            }
         }
-        if (Options.muteOnClose) changeVolume(0);
+        // 转发那份档位是 0(旧版断开时调成 0 留下的)手机上一点声音没有：调到最大，响度用手机自己的音量键
+        if (onSubmix && AudioManager.getStreamVolume(3) == 0) {
+            int max = AudioManager.getStreamMaxVolume(3);
+            if (max > 0) AudioManager.setStreamVolume(3, max);
+        }
+    }
+
+    // 会话结束时调用，只要进程还能跑代码(包括会话没建立、关机)。isSessionClose：会话建立过且不是关机，按“断开时静音”做
+    public static void finishVolume(boolean isSessionClose) {
+        synchronized (volumeLock) {
+            if (isVolumeFinished) return;
+            isVolumeFinished = true;
+            String mark = readMuteMark();
+            boolean isMuted = Boolean.TRUE.equals(AudioManager.isStreamMute(3));
+            if ("user".equals(mark)) {
+                // 用户的静音还回去
+                if (!isMuted) mute();
+                writeMuteMark(null);
+            } else if (isSessionClose && Options.muteOnClose) {
+                // 是这次断开关的声音才记 ours；已经静着音(会话里用户自己静的)就不算我们的
+                if (!isMuted) {
+                    writeMuteMark("ours");
+                    mute();
+                }
+            } else if ("ours".equals(mark)) {
+                // 会话没建立就结束：开始时取消的我们的静音加回去，标记留着；
+                // 建立过但这次没开“断开时静音”：不再静，标记清掉
+                if (!isSessionClose) {
+                    if (!isMuted) mute();
+                } else writeMuteMark(null);
+            }
+        }
+    }
+
+    // 等声音切到转发再取消，免得外放响一下；查不到路由就等一会儿
+    private static void unmute(boolean isRouted) {
+        if (!isRouted) SystemClock.sleep(300);
+        AudioManager.adjustStreamVolume(3, AudioManager.ADJUST_UNMUTE);
+    }
+
+    // 老系统(安卓 5)没有静音开关，退回把档位调成 0(系统会顺带静音)
+    private static void mute() {
+        if (!AudioManager.adjustStreamVolume(3, AudioManager.ADJUST_MUTE)) changeVolume(0);
+    }
+
+    private static String readMuteMark() {
+        try (FileInputStream in = new FileInputStream(MUTE_MARK)) {
+            byte[] buffer = new byte[16];
+            int len = in.read(buffer);
+            return len > 0 ? new String(buffer, 0, len).trim() : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    // 先写临时文件再改名，断电也不会留下半个文件
+    private static void writeMuteMark(String value) {
+        if (value == null) {
+            new File(MUTE_MARK).delete();
+            return;
+        }
+        File tmp = new File(MUTE_MARK + ".tmp");
+        try (FileOutputStream out = new FileOutputStream(tmp)) {
+            out.write(value.getBytes());
+            out.getFD().sync();
+        } catch (Exception ignored) {
+        }
+        if (!tmp.renameTo(new File(MUTE_MARK))) tmp.delete();
     }
 
     public static void changeScreenPowerMode(int mode) {

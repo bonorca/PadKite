@@ -1,13 +1,11 @@
 package top.saymzx.easycontrol.app.client.view;
 
 import android.annotation.SuppressLint;
-import android.content.res.ColorStateList;
 import android.graphics.Outline;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.text.InputType;
 import android.util.DisplayMetrics;
-import android.util.Pair;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -16,7 +14,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.view.WindowManager;
-import android.widget.SeekBar;
 
 import java.nio.ByteBuffer;
 import java.util.Objects;
@@ -33,12 +30,11 @@ import top.saymzx.easycontrol.app.entity.Device;
 import top.saymzx.easycontrol.app.helper.PublicTools;
 import top.saymzx.easycontrol.app.helper.ViewTools;
 
-public class SmallView extends ViewOutlineProvider {
+public class SmallView extends ViewOutlineProvider implements ControlPanel.Host {
     private final Device device;
     private ClientController clientController;
     private volatile boolean isShow = false;
-    private boolean light = true;
-    private boolean mouse = false;
+    private ControlPanel controlPanel;
 
     // 悬浮窗
     private final ModuleSmallViewBinding smallView = ModuleSmallViewBinding.inflate(LayoutInflater.from(AppData.applicationContext));
@@ -59,8 +55,6 @@ public class SmallView extends ViewOutlineProvider {
         clientController = Client.getClientController(uuid);
         if (device == null || clientController == null) return;
         smallViewParams.gravity = Gravity.START | Gravity.TOP;
-        // 设置默认导航栏状态
-        setNavBarHide(device.showNavBarOnConnect);
         // 设置监听控制
         setFloatVideoListener();
         setReSizeListener();
@@ -75,14 +69,13 @@ public class SmallView extends ViewOutlineProvider {
     public void show() {
         if (device == null || clientController == null) return;
         // 初始化
-        smallView.barView.setVisibility(View.GONE);
+        showNavBar(clientController.isNavBarShown());
         smallViewParams.x = device.smallX;
         smallViewParams.y = device.smallY;
         updateMaxSize();
         if (!Objects.equals(device.startApp, "")) {
             smallView.buttonHome.setVisibility(View.GONE);
             smallView.buttonSwitch.setVisibility(View.GONE);
-            smallView.buttonApp.setVisibility(View.GONE);
             smallView.textureViewLayout.setPadding(0, PublicTools.dp2px(25f), 0, 0);
         }
         // 自定义分辨率(2:1)
@@ -91,16 +84,15 @@ public class SmallView extends ViewOutlineProvider {
         // 显示
         AppData.windowManager.addView(smallView.getRoot(), smallViewParams);
         smallView.textureViewLayout.addView(clientController.getTextureView(), 0);
-        // 同步鼠标状态(小窗重开时恢复图标与光标覆盖层)
-        mouse = clientController.isMouseMode();
-        smallView.buttonMouse.setImageTintList(ColorStateList.valueOf(AppData.applicationContext.getColor(mouse ? R.color.mouseActive : R.color.clientNavIcon)));
-        if (mouse) clientController.showCursorOverlay();
+        // 小窗重开时恢复光标覆盖层
+        if (clientController.isMouseMode()) clientController.showCursorOverlay();
         ViewTools.viewAnim(smallView.getRoot(), true, 0, PublicTools.dp2px(40f), null);
         isShow = true;
     }
 
     public void hide() {
         if (device == null || clientController == null) return;
+        if (controlPanel != null) controlPanel.hide(false);
         try {
             smallView.textureViewLayout.removeView(clientController.getTextureView());
             AppData.windowManager.removeView(smallView.getRoot());
@@ -114,6 +106,8 @@ public class SmallView extends ViewOutlineProvider {
     private void setFloatVideoListener() {
         smallView.getRoot().setOnTouchHandle(event -> {
             if (event.getAction() == MotionEvent.ACTION_OUTSIDE) {
+                // 控制面板盖在小窗上面，点面板也算点到小窗外面，不能因此挂起
+                if (controlPanel != null) return;
                 if (device.smallToMiniOnRunning)
                     clientController.handleAction("changeToMini", ByteBuffer.wrap("changeToSmall".getBytes()), 0);
                 else if (smallViewParams.flags != LayoutParamsFlagNoFocus) {
@@ -164,7 +158,9 @@ public class SmallView extends ViewOutlineProvider {
                     break;
                 }
                 case MotionEvent.ACTION_UP:
-                    if (!isFilp.get()) changeBarView();
+                    // 拖完马上记住位置
+                    if (!isFilp.get()) showControlPanel();
+                    else clientController.saveDevice();
                     break;
             }
             return true;
@@ -176,146 +172,42 @@ public class SmallView extends ViewOutlineProvider {
         smallView.buttonBack.setOnClickListener(v -> clientController.handleAction("buttonBack", null, 0));
         smallView.buttonHome.setOnClickListener(v -> clientController.handleAction("buttonHome", null, 0));
         smallView.buttonSwitch.setOnClickListener(v -> clientController.handleAction("buttonSwitch", null, 0));
-        smallView.buttonApp.setOnClickListener(v -> {
-            clientController.handleAction("changeToApp", null, 0);
-            changeBarView();
-        });
-        smallView.buttonMini.setOnClickListener(v -> clientController.handleAction("changeToMini", null, 0));
-        smallView.buttonFull.setOnClickListener(v -> clientController.handleAction("changeToFull", null, 0));
-        smallView.buttonClose.setOnClickListener(v -> Client.sendAction(device.uuid, "close", null, 0));
-        smallView.buttonRotate.setOnClickListener(v -> {
-            clientController.handleAction("buttonRotate", null, 0);
-            changeBarView();
-        });
-        smallView.buttonNavBar.setOnClickListener(v -> {
-            setNavBarHide(smallView.navBar.getVisibility() == View.GONE);
-            changeBarView();
-        });
-        smallView.buttonPower.setOnClickListener(v -> {
-            clientController.handleAction("buttonPower", null, 0);
-            changeBarView();
-        });
-        smallView.buttonLight.setOnClickListener(v -> {
-            light = !light;
-            smallView.buttonLight.setImageResource(light ? R.drawable.lightbulb_off : R.drawable.lightbulb);
-            clientController.handleAction(light ? "buttonLight" : "buttonLightOff", null, 0);
-            changeBarView();
-        });
-        smallView.buttonVolume.setOnClickListener(v -> changeVolumeBar());
-        // 虚拟鼠标：触控板式，开启后光标高亮
-        smallView.buttonMouse.setOnClickListener(v -> {
-            mouse = !mouse;
-            clientController.handleAction("toggleMouse", null, 0);
-            smallView.buttonMouse.setImageTintList(ColorStateList.valueOf(AppData.applicationContext.getColor(mouse ? R.color.mouseActive : R.color.clientNavIcon)));
-            changeBarView();
-        });
-        smallView.buttonScreenshot.setOnClickListener(v -> {
-            clientController.handleAction("screenshot", null, 0);
-            changeBarView();
-        });
-        smallView.buttonStatus.setOnClickListener(v -> {
-            showStatusDialog();
-            changeBarView();
-        });
-        // 滑块两端图标：直接切静音/切最大
-        smallView.imageVolumeMute.setOnClickListener(v -> setVolumeByIcon(0));
-        smallView.imageVolumeMax.setOnClickListener(v -> setVolumeByIcon(100));
-        smallView.seekbarVolume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (!fromUser) return;
-                clientController.handleAction("setVolume", ControlPacket.createVolumeEvent(progress), 0);
-                updateVolumeIcon(progress);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
     }
 
-    // 展开/收起音量滑块：展开前在后台读取被控机当前音量并定位滑块，老系统读取失败则不展开
-    private void changeVolumeBar() {
-        if (smallView.volumeBar.getVisibility() == View.VISIBLE) {
-            smallView.volumeBar.setVisibility(View.GONE);
-            return;
-        }
-        smallView.volumeBar.setVisibility(View.VISIBLE);
-        smallView.seekbarVolume.setProgress(0);
-        new Thread(() -> {
-            Pair<Integer, Integer> volumeInfo;
-            try {
-                volumeInfo = clientController.getVolumeInfo();
-            } catch (Exception ignored) {
-                volumeInfo = null;
-            }
-            final Pair<Integer, Integer> volumeInfoFinal = volumeInfo;
-            AppData.uiHandler.post(() -> {
-                if (volumeInfoFinal == null) {
-                    smallView.volumeBar.setVisibility(View.GONE);
-                    PublicTools.logToast("SmallView", AppData.applicationContext.getString(R.string.toast_volume_not_support), true);
-                    return;
-                }
-                // 滑块统一 0-100，服务端按被控机自身音量上限换算
-                smallView.seekbarVolume.setMax(100);
-                smallView.seekbarVolume.setProgress(Math.round(volumeInfoFinal.first * 100f / volumeInfoFinal.second));
-                updateVolumeIcon(volumeInfoFinal.first);
-            });
-        }).start();
+    // 控制面板单独开一个全屏悬浮窗
+    private void showControlPanel() {
+        if (controlPanel != null) return;
+        controlPanel = new ControlPanel(AppData.applicationContext, null, device, clientController, this);
+        controlPanel.show();
     }
 
-    // 音量图标随静音状态切换
-    private void updateVolumeIcon(int volume) {
-        smallView.buttonVolume.setImageResource(volume == 0 ? R.drawable.volume_off : R.drawable.volume_up);
+    @Override
+    public void onPanelClosed() {
+        controlPanel = null;
     }
 
-    // 点击滑块两端图标：直接切到静音(0)或最大(100)，滑块归位并同步被控机
-    private void setVolumeByIcon(int volume) {
-        smallView.seekbarVolume.setProgress(volume);
-        clientController.handleAction("setVolume", ControlPacket.createVolumeEvent(volume), 0);
-        updateVolumeIcon(volume);
+    @Override
+    public boolean isFull() {
+        return false;
     }
 
-    // 设备状态面板：后台读被控机状态后弹窗展示(悬浮窗非Activity，用Application上下文)
-    private void showStatusDialog() {
-        new Thread(() -> {
-            ClientController.DeviceStatus status;
-            try {
-                status = clientController.getDeviceStatus();
-            } catch (Exception ignored) {
-                status = null;
-            }
-            final ClientController.DeviceStatus statusFinal = status;
-            AppData.uiHandler.post(() -> {
-                if (statusFinal == null) {
-                    PublicTools.logToast("SmallView", AppData.applicationContext.getString(R.string.toast_status_failed), true);
-                    return;
-                }
-                // 悬浮窗非 Activity，Application 上下文没有窗口 token，DeviceStatusDialog 内部会切 overlay 类型
-                DeviceStatusDialog.show(AppData.applicationContext, device, statusFinal, true, this::showStatusDialog);
-            });
-        }).start();
+    @Override
+    public boolean isAutoRotate() {
+        return false;
     }
 
-    // 导航栏隐藏
-    private void setNavBarHide(boolean isShow) {
+    @Override
+    public void setAutoRotate(boolean isAuto) {
+    }
+
+    @Override
+    public void setNavBarShown(boolean isShow) {
+        clientController.setNavBarShown(isShow);
+        showNavBar(isShow);
+    }
+
+    private void showNavBar(boolean isShow) {
         smallView.navBar.setVisibility(isShow ? View.VISIBLE : View.GONE);
-        smallView.buttonNavBar.setImageResource(isShow ? R.drawable.not_equal : R.drawable.equals);
-    }
-
-    private void changeBarView() {
-        boolean toShowView = smallView.barView.getVisibility() == View.GONE;
-        ViewTools.viewAnim(smallView.barView, toShowView, 0, PublicTools.dp2px(-40f), (isStart -> {
-            if (isStart && toShowView) smallView.barView.setVisibility(View.VISIBLE);
-            else if (!isStart && !toShowView) {
-                smallView.barView.setVisibility(View.GONE);
-                smallView.volumeBar.setVisibility(View.GONE);
-            }
-        }));
     }
 
     // 设置悬浮窗大小拖动按钮监听控制
@@ -330,6 +222,7 @@ public class SmallView extends ViewOutlineProvider {
                 device.smallLength = length;
             else device.smallLengthLan = length;
             updateMaxSize();
+            if (event.getActionMasked() == MotionEvent.ACTION_UP) clientController.saveDevice();
             return true;
         });
     }
@@ -345,7 +238,12 @@ public class SmallView extends ViewOutlineProvider {
     public void updateView(int x, int y) {
         smallViewParams.x = x;
         smallViewParams.y = y;
-        AppData.windowManager.updateViewLayout(smallView.getRoot(), smallViewParams);
+        // 排队中的位置更新可能晚于小窗被移除(切最小化、断开)
+        if (!isShow || !smallView.getRoot().isAttachedToWindow()) return;
+        try {
+            AppData.windowManager.updateViewLayout(smallView.getRoot(), smallViewParams);
+        } catch (Exception ignored) {
+        }
     }
 
     private void updateMaxSize() {

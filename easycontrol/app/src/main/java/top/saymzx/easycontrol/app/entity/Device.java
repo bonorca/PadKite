@@ -69,12 +69,16 @@ public class Device {
     public int maxVideoBit = autoVideoBit(maxSize, maxFps);
     public boolean useH265 = true;
     public boolean connectOnStart = false;
-    public boolean customResolutionOnConnect = false;
+    public boolean customResolutionOnConnect = true;
     public boolean customResolutionFollow = true;
     public boolean wakeOnConnect = true;
     public boolean lightOffOnConnect = false;
     public boolean showNavBarOnConnect = true;
-    public boolean changeToFullOnConnect = false;
+    // 全屏的自动旋转和上次的横竖屏(ActivityInfo.SCREEN_ORIENTATION_*，-1 没记过)，和导航栏一样在控制面板里改了就记住
+    public boolean autoRotate = true;
+    public int fullOrientation = -1;
+    public boolean mouseMode = false;
+    public boolean changeToFullOnConnect = true;
     public boolean keepWakeOnRunning = true;
     public boolean changeResolutionOnRunning = false;
     public boolean smallToMiniOnRunning = false;
@@ -101,6 +105,23 @@ public class Device {
         this.uuid = uuid;
         this.type = type;
         this.name = uuid;
+    }
+
+    // 设备设置页保存前调用：opened 是打开页面时读的，latest 是现在数据库里的；
+    // 会话中记住的偏好，这页没改的就用最新的，免得把旧值写回去
+    public void keepSessionPrefs(Device opened, Device latest) {
+        if (showNavBarOnConnect == opened.showNavBarOnConnect) showNavBarOnConnect = latest.showNavBarOnConnect;
+        if (lightOffOnConnect == opened.lightOffOnConnect) lightOffOnConnect = latest.lightOffOnConnect;
+        autoRotate = latest.autoRotate;
+        fullOrientation = latest.fullOrientation;
+        mouseMode = latest.mouseMode;
+        smallX = latest.smallX;
+        smallY = latest.smallY;
+        smallLength = latest.smallLength;
+        smallXLan = latest.smallXLan;
+        smallYLan = latest.smallYLan;
+        smallLengthLan = latest.smallLengthLan;
+        miniY = latest.miniY;
     }
 
     public boolean isNetworkDevice() {
@@ -134,6 +155,9 @@ public class Device {
         newDevice.wakeOnConnect = wakeOnConnect;
         newDevice.lightOffOnConnect = lightOffOnConnect;
         newDevice.showNavBarOnConnect = showNavBarOnConnect;
+        newDevice.autoRotate = autoRotate;
+        newDevice.fullOrientation = fullOrientation;
+        newDevice.mouseMode = mouseMode;
         newDevice.changeToFullOnConnect = changeToFullOnConnect;
         newDevice.keepWakeOnRunning = keepWakeOnRunning;
         newDevice.changeResolutionOnRunning = changeResolutionOnRunning;

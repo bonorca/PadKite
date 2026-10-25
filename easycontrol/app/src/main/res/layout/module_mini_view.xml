@@ -17,7 +17,7 @@
         android:padding="@dimen/spaceSm">
 
         <ImageView
-            android:id="@+id/button_small"
+            android:id="@+id/button_full"
             android:layout_width="44dp"
             android:layout_height="40dp"
             android:background="@drawable/background_client_button"
@@ -25,7 +25,7 @@
             android:paddingTop="11dp"
             android:paddingEnd="11dp"
             android:paddingBottom="6dp"
-            android:src="@drawable/window_restore"
+            android:src="@drawable/expand"
             android:tint="@color/clientNavIcon" />
 
         <View
@@ -39,7 +39,7 @@
             android:focusable="false" />
 
         <ImageView
-            android:id="@+id/button_full"
+            android:id="@+id/button_small"
             android:layout_width="44dp"
             android:layout_height="40dp"
             android:background="@drawable/background_client_button"
@@ -47,7 +47,7 @@
             android:paddingTop="6dp"
             android:paddingEnd="11dp"
             android:paddingBottom="11dp"
-            android:src="@drawable/expand"
+            android:src="@drawable/window_restore"
             android:tint="@color/clientNavIcon" />
 
     </LinearLayout>

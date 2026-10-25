@@ -47,8 +47,8 @@ public final class Server {
 
     private static final String TAG = "Easycontrol_Server";
     private static final int timeoutDelay = 1000 * 20;
-    // 客户端每2秒发一次心跳、10秒收不到数据就自己断开，服务端等更久没有意义
-    private static final int keepAliveTimeout = 1000 * 10;
+    // 客户端每2秒发一次心跳、30秒收不到数据就自己断开，服务端等更久没有意义
+    private static final int keepAliveTimeout = 1000 * 30;
 
     public static void main(String... args) {
         // 任何线程崩溃都走正常释放(先恢复分辨率)，默认处理会直接杀进程
@@ -74,6 +74,7 @@ public final class Server {
             connectClient();
             // 初始化子服务
             boolean canAudio = AudioEncode.init();
+            Device.prepareVolume(canAudio);
             VideoEncode.init();
             // 启动
             ArrayList<Thread> threads = new ArrayList<>();
@@ -90,8 +91,9 @@ public final class Server {
             for (Thread thread : threads) thread.start();
             // 程序运行
             timeOutThread.interrupt();
+            // 没人 notify，这里一直等到进程被结束；wait 可能无故醒来，要循环
             synchronized (object) {
-                object.wait();
+                while (!isReleased.get()) object.wait();
             }
             // 终止子服务
             for (Thread thread : threads) thread.interrupt();
@@ -352,15 +354,20 @@ public final class Server {
         });
         haltThread.setDaemon(true);
         haltThread.start();
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 4; i++) {
             try {
                 switch (i) {
                     case 0:
-                        Device.fallbackResolution(isShutdown);
+                        // 断开时操作先做：都是很快的系统调用，分辨率之后哪步卡住、被强制结束，守护进程还会按备份恢复；
+                        // 反过来的话恢复分辨率卡住，锁定和静音就没机会做了。关机时不用锁定，但用户的静音照样还回去
+                        if (!isShutdown) {
+                            Device.restoreScreenPower();
+                            if (isConnected) Device.runCloseActions();
+                        }
+                        Device.finishVolume(isConnected && !isShutdown);
                         break;
                     case 1:
-                        // 关机时不用做
-                        if (isConnected && !isShutdown) Device.runCloseActions();
+                        Device.fallbackResolution(isShutdown);
                         break;
                     case 2:
                         mainInputStream.close();
@@ -368,14 +375,14 @@ public final class Server {
                         videoSocket.close();
                         break;
                     case 3:
-                        VideoEncode.release();
-                        AudioEncode.release();
-                        break;
-                    case 4:
-                        Runtime.getRuntime().exit(0);
+                        // 编码器、录音、镜像屏不手动释放，直接结束进程交给系统回收：音视频线程这时还在用，
+                        // 别的线程去 stop/reset/release 会在 native 层崩溃(实测 MediaCodec.reset 断言失败、SIGSEGV)；
+                        // exit 也一样，它跑析构时这些线程还在跑
+                        Os.kill(Os.getpid(), OsConstants.SIGKILL);
                         break;
                 }
             } catch (Exception ignored) {
+                if (i == 3) Runtime.getRuntime().halt(0);
             }
         }
     }

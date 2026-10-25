@@ -164,13 +164,4 @@ public final class VideoEncode {
         encedec.releaseOutputBuffer(outIndex, false);
     }
 
-    public static void release() {
-        try {
-            stopEncode();
-            encedec.release();
-            if (display != null) SurfaceControl.destroyDisplay(display);
-        } catch (Exception ignored) {
-        }
-    }
-
 }

@@ -44,8 +44,17 @@
     <color name="clientNavBar">#99000000</color>
     <color name="clientNavIcon">#FFFFFF</color>
 
-    <!-- 虚拟鼠标开启态高亮 -->
-    <color name="mouseActive">#4ADE80</color>
+    <!-- 控制面板：遮罩、面板、按钮(开启态高亮)、悬浮按钮 -->
+    <color name="clientScrim">#80000000</color>
+    <color name="clientPanel">#F21C1F26</color>
+    <color name="clientTile">#1AFFFFFF</color>
+    <color name="clientTileOn">#4ADE80</color>
+    <color name="onClientTileOn">#052E16</color>
+    <color name="clientTextSecond">#B3FFFFFF</color>
+    <color name="clientFloat">#8C000000</color>
+    <color name="clientFloatStroke">#40FFFFFF</color>
+    <color name="clientAlert">#33F87171</color>
+    <color name="onClientAlert">#FCA5A5</color>
 
     <!-- 彩色图标背景：降低饱和度，更柔和现代 -->
     <color name="color1">#ECFDF5</color>

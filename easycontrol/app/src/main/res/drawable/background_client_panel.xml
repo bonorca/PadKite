@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?><!-- 控制面板背景：深色圆角卡片 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="@dimen/cronLarge" />
+    <solid android:color="@color/clientPanel" />
+</shape>

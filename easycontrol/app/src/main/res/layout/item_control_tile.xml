@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?><!-- 控制面板按钮：图标 + 文字，开关类开启时整块高亮 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="0dp"
+    android:layout_height="64dp"
+    android:layout_margin="@dimen/spaceXs"
+    android:layout_weight="1"
+    android:background="@drawable/background_client_tile"
+    android:focusable="false"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingStart="2dp"
+    android:paddingEnd="2dp"
+    tools:ignore="UseAppTint">
+
+    <ImageView
+        android:id="@+id/icon"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:tint="@color/onBlackBacnground" />
+
+    <TextView
+        android:id="@+id/text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textColor="@color/onBlackBacnground"
+        android:textSize="12sp" />
+</LinearLayout>

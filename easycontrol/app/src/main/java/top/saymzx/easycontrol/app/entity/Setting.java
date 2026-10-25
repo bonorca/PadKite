@@ -18,12 +18,27 @@ public final class Setting {
         editor.apply();
     }
 
+    // 旧版的全局自动旋转，只在数据库升级时读一次，之后每个设备各记各的
     public boolean getAutoRotate() {
         return sharedPreferences.getBoolean("autoRotate", true);
     }
 
-    public void setAutoRotate(boolean value) {
-        editor.putBoolean("autoRotate", value);
+    // 全屏悬浮按钮贴的边(0 左 1 上 2 右 3 下)和在这条边上的位置(0-1)
+    public int getFloatEdge() {
+        return sharedPreferences.getInt("floatEdge", 2);
+    }
+
+    public void setFloatEdge(int value) {
+        editor.putInt("floatEdge", value);
+        editor.apply();
+    }
+
+    public float getFloatPos() {
+        return sharedPreferences.getFloat("floatPos", 0.3f);
+    }
+
+    public void setFloatPos(float value) {
+        editor.putFloat("floatPos", value);
         editor.apply();
     }
 

@@ -31,7 +31,7 @@ public class ClientPlayer {
     private static final int KEEP_ALIVE_EVENT = 4;
     private static final int SCREENSHOT_EVENT = 5;
     // 心跳超时检测：超过该时间未收到任何数据(含心跳响应)则认为连接断开
-    private static final int KEEP_ALIVE_TIMEOUT = 1000 * 10;
+    private static final int KEEP_ALIVE_TIMEOUT = 1000 * 30;
     private volatile long lastReceiveTime = SystemClock.elapsedRealtime();
     // 正在接收大载荷(如截图PNG)：此时连接仍是活的，只是主流被阻塞在整段读取，须暂停心跳超时判定
     private volatile boolean receivingLargePayload = false;

@@ -74,18 +74,15 @@ public class DeviceListAdapter extends BaseAdapter {
         // 网络设备显示IP地址，有线设备显示连接类型
         devicesItemBinding.deviceType.setText(device.isNetworkDevice() ? device.address : context.getString(R.string.main_device_type_link));
         devicesItemBinding.deviceName.setText(device.name);
-        // 单击事件
+        // 点卡片连接，点右边的按钮打开设备选项
         devicesItemBinding.getRoot().setOnClickListener(v -> Client.startDevice(device));
-        // 长按事件
-        devicesItemBinding.getRoot().setOnLongClickListener(v -> {
-            onLongClickCard(device);
-            return true;
-        });
+        devicesItemBinding.buttonMenu.setOnClickListener(v -> showDeviceMenu(device));
+        devicesItemBinding.getRoot().setOnLongClickListener(v -> true);
         return view;
     }
 
-    // 卡片长按事件
-    private void onLongClickCard(Device device) {
+    // 设备选项
+    private void showDeviceMenu(Device device) {
         ItemSetDeviceBinding itemSetDeviceBinding = ItemSetDeviceBinding.inflate(LayoutInflater.from(context));
         Dialog dialog = ViewTools.createDialog(context, true, itemSetDeviceBinding.getRoot());
         // 有线设备

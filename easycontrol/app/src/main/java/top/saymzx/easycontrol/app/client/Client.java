@@ -65,8 +65,7 @@ public class Client {
                 }
                 if (!isTempDevice && device.wakeOnConnect)
                     clientController.handleAction("buttonWake", null, 0);
-                if (!isTempDevice && device.lightOffOnConnect)
-                    clientController.handleAction("buttonLightOff", null, 2000);
+                if (!isTempDevice && device.lightOffOnConnect) clientController.screenOffOnConnect();
                 // 连接成功回调（单应用投屏切换：此时才关闭原会话，连接失败则原会话保留）
                 if (device.onConnectSuccess != null) {
                     Runnable onConnectSuccess = device.onConnectSuccess;
@@ -80,6 +79,11 @@ public class Client {
 
     public static void startDevice(Device device) {
         if (device == null) return;
+        // 列表里的设备对象可能是会话之前读的旧副本：以数据库为准，免得用旧的偏好开始、再把旧值写回去
+        if (!device.isTempDevice()) {
+            Device latest = AppData.dbHelper.getByUUID(device.uuid);
+            if (latest != null) device = latest;
+        }
         new Client(device);
     }
 
@@ -137,7 +141,12 @@ public class Client {
         // 临时设备
         boolean isTempDevice = device.isTempDevice();
         // 更新数据库
-        if (!isTempDevice) AppData.dbHelper.update(device);
+        if (!isTempDevice) {
+            try {
+                AppData.dbHelper.updatePrefs(device);
+            } catch (Exception ignored) {
+            }
+        }
         allClient.remove(device.uuid);
         AppData.uiHandler.post(ClientService::update);
         // 断开时操作(锁定/恢复背光/静音)由服务端在会话结束时执行，启动参数传过去

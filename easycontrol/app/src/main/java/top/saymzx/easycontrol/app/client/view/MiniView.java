@@ -108,6 +108,9 @@ public class MiniView {
                     AppData.windowManager.updateViewLayout(miniView.getRoot(), miniViewParams);
                     break;
                 }
+                case MotionEvent.ACTION_UP:
+                    clientController.saveDevice();
+                    break;
             }
             return true;
         });

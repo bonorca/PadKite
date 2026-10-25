@@ -26,7 +26,8 @@
     <string name="set_other_locale">语言切换(中文/English)</string>
     <string name="set_about_website">项目主页</string>
     <string name="set_about_privacy">隐私政策</string>
-    <string name="set_about_version">版本: </string>
+    <string name="set_about_version">版本 %1$s</string>
+    <string name="set_about_check_update">检查新版本</string>
 
     <!-- 查看IP地址页面 -->
     <string name="ip_ipv4">IPv4(点击复制)</string>
@@ -56,9 +57,9 @@
     <string name="device_wake_on_connect">连接时自动唤醒</string>
     <string name="device_wake_on_connect_detail">连接成功后自动唤醒被控端</string>
     <string name="device_light_off_on_connect">连接时关闭背光</string>
-    <string name="device_light_off_on_connect_detail">连接成功后自动关闭被控端屏幕</string>
+    <string name="device_light_off_on_connect_detail">连接成功后自动关闭被控端屏幕，在控制面板里切换会自动记住</string>
     <string name="device_show_nav_bar_on_connect">打开导航栏显示</string>
-    <string name="device_show_nav_bar_on_connect_detail">设置小窗和全屏模式默认是否显示导航栏</string>
+    <string name="device_show_nav_bar_on_connect_detail">连接后是否显示导航栏，在控制面板里切换会自动记住</string>
     <string name="device_change_to_full_on_connect">默认全屏启动</string>
     <string name="device_change_to_full_on_connect_detail">开启后在连接成功后直接进入全屏状态</string>
 
@@ -82,7 +83,7 @@
     <string name="device_light_on_close">断开时恢复背光</string>
     <string name="device_light_on_close_detail">断开时自动恢复被控端背光</string>
     <string name="device_mute_on_close">断开时被控机静音</string>
-    <string name="device_mute_on_close_detail">断开连接时将远程手机音量设置为静音</string>
+    <string name="device_mute_on_close_detail">断开连接时把被控端媒体声音静音，下次连接时自动取消</string>
     <string name="device_reconnect_on_close">自动重连</string>
     <string name="device_reconnect_on_close_detail">当意外断开时，自动重新连接</string>
 
@@ -104,6 +105,7 @@
     <string name="device_button">确认</string>
 
     <!-- 设备设置模块 -->
+    <string name="device_menu">设备选项</string>
     <string name="set_device_title">干什么◔ ‸◔?</string>
     <string name="set_device_button_change">修改</string>
     <string name="set_device_button_start_wireless">打开无线</string>
@@ -112,6 +114,21 @@
     <string name="notification_channel_connect">连接状态</string>
     <string name="notification_connected">正在控制 %s</string>
     <string name="set_device_button_delete">删除</string>
+
+    <!-- 控制面板 -->
+    <string name="panel_nav_bar">导航栏</string>
+    <string name="panel_auto_rotate">自动旋转</string>
+    <string name="panel_mouse">鼠标</string>
+    <string name="panel_screen_off">熄屏控制</string>
+    <string name="panel_rotate">旋转被控端</string>
+    <string name="panel_screenshot">截图</string>
+    <string name="panel_power">电源键</string>
+    <string name="panel_status">设备状态</string>
+    <string name="panel_single_app">单应用投屏</string>
+    <string name="panel_small">小窗</string>
+    <string name="panel_full">全屏</string>
+    <string name="panel_mini">最小化</string>
+    <string name="panel_disconnect">断开连接</string>
 
     <!-- 加载中模块 -->
     <string name="loading_text">加载中</string>
@@ -131,7 +148,6 @@
     <string name="toast_stream_closed">连接断开</string>
     <string name="toast_float_per">需要悬浮窗权限</string>
     <string name="toast_home_single_app">桌面不支持单应用投屏</string>
-    <string name="toast_volume_not_support">设备系统过低，不支持音量调节</string>
     <string name="toast_screenshot_saved">截图已保存到相册</string>
     <string name="toast_screenshot_failed">截图保存失败</string>
     <string name="toast_record_start">开始录屏</string>
