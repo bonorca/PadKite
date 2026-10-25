@@ -177,9 +177,6 @@ public class ClientController implements TextureView.SurfaceTextureListener {
                 case "updateVideoSize":
                     updateVideoSize(byteBuffer);
                     break;
-                case "runShell":
-                    runShell(byteBuffer);
-                    break;
                 case "setClipBoard":
                     setClipBoard(byteBuffer);
                     break;
@@ -636,11 +633,6 @@ public class ClientController implements TextureView.SurfaceTextureListener {
     private void setClipBoard(ByteBuffer byteBuffer) {
         nowClipboardText = new String(byteBuffer.array());
         AppData.clipBoard.setPrimaryClip(ClipData.newPlainText(MIMETYPE_TEXT_PLAIN, nowClipboardText));
-    }
-
-    private void runShell(ByteBuffer byteBuffer) throws Exception {
-        String cmd = new String(byteBuffer.array());
-        clientStream.runShell(cmd);
     }
 
     // 读取被控机媒体音量：返回(当前值, 最大值)；读取失败(老系统/media_session不可用)返回null
