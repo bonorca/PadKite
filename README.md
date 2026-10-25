@@ -1,4 +1,4 @@
-# PadKite
+# PadKite <img src="pic/icon/icon.svg" alt="" height="40" align="top">
 
 Control one Android device from another wirelessly. Fork of [yutils/Easycontrol](https://github.com/yutils/Easycontrol) 1.6.1.
 
